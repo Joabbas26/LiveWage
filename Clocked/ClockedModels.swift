@@ -1,0 +1,839 @@
+//
+//  ClockedModels.swift
+//  Clocked
+//
+//  Created by Codex on 5/4/26.
+//
+
+import Foundation
+import SwiftUI
+
+enum ClockedConstants {
+    static let primaryStreamID = UUID(uuidString: "2E0A6EF2-3A84-4D3A-9B7A-6BC5A3B91111")!
+    static let maxIncomeStreams = 3
+}
+
+enum PayFrequency: String, CaseIterable, Codable, Identifiable {
+    case annual
+    case monthly
+    case hourly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .annual:
+            return "Annual"
+        case .monthly:
+            return "Monthly"
+        case .hourly:
+            return "Hourly"
+        }
+    }
+
+    var inputTitle: String {
+        switch self {
+        case .annual:
+            return "Base salary"
+        case .monthly:
+            return "Base monthly pay"
+        case .hourly:
+            return "Base hourly rate"
+        }
+    }
+}
+
+enum FilingStatus: String, CaseIterable, Codable, Identifiable {
+    case single
+    case marriedJoint
+    case headOfHousehold
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .single:
+            return "Single"
+        case .marriedJoint:
+            return "Married filing jointly"
+        case .headOfHousehold:
+            return "Head of household"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .single:
+            return "Single"
+        case .marriedJoint:
+            return "Joint"
+        case .headOfHousehold:
+            return "HOH"
+        }
+    }
+}
+
+enum LocationOption: String, CaseIterable, Codable, Identifiable {
+    case newYorkCity = "newYork"
+    case california = "losAngeles"
+    case illinois = "chicago"
+    case texas = "austin"
+    case florida = "miami"
+    case washington = "seattle"
+    case massachusetts
+    case colorado
+    case pennsylvania
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .newYorkCity:
+            return "New York City, NY"
+        case .california:
+            return "California"
+        case .illinois:
+            return "Illinois"
+        case .texas:
+            return "Texas"
+        case .florida:
+            return "Florida"
+        case .washington:
+            return "Washington"
+        case .massachusetts:
+            return "Massachusetts"
+        case .colorado:
+            return "Colorado"
+        case .pennsylvania:
+            return "Pennsylvania"
+        }
+    }
+
+    var shortName: String {
+        switch self {
+        case .newYorkCity:
+            return "NYC"
+        case .california:
+            return "CA"
+        case .illinois:
+            return "IL"
+        case .texas:
+            return "TX"
+        case .florida:
+            return "FL"
+        case .washington:
+            return "WA"
+        case .massachusetts:
+            return "MA"
+        case .colorado:
+            return "CO"
+        case .pennsylvania:
+            return "PA"
+        }
+    }
+
+    var stateCode: String {
+        switch self {
+        case .newYorkCity:
+            return "NY"
+        case .california:
+            return "CA"
+        case .illinois:
+            return "IL"
+        case .texas:
+            return "TX"
+        case .florida:
+            return "FL"
+        case .washington:
+            return "WA"
+        case .massachusetts:
+            return "MA"
+        case .colorado:
+            return "CO"
+        case .pennsylvania:
+            return "PA"
+        }
+    }
+
+    var taxLabel: String {
+        switch self {
+        case .newYorkCity:
+            return "NY state + NYC resident tax"
+        case .california:
+            return "CA resident tax"
+        case .illinois:
+            return "IL resident tax"
+        case .texas:
+            return "TX resident tax"
+        case .florida:
+            return "FL resident tax"
+        case .washington:
+            return "WA resident tax"
+        case .massachusetts:
+            return "MA resident tax"
+        case .colorado:
+            return "CO resident tax"
+        case .pennsylvania:
+            return "PA resident tax"
+        }
+    }
+
+    var localTaxTitle: String? {
+        switch self {
+        case .newYorkCity:
+            return "NYC resident tax"
+        case .california, .illinois, .texas, .florida, .washington, .massachusetts, .colorado, .pennsylvania:
+            return nil
+        }
+    }
+}
+
+struct EarningsConfiguration: Codable, Equatable {
+    static let retirementDeferralLimit = 23_500.0
+
+    var salaryAmount: Double
+    var payFrequency: PayFrequency
+    var filingStatus: FilingStatus
+    var location: LocationOption
+    var workHoursPerDay: Int
+    var workDaysPerWeek: Int
+    var workStartMinutes: Int
+    var annualBonusAmount: Double
+    var monthlyPretaxBenefitsAmount: Double
+    var retirementContributionPercent: Int
+    var savingsGoalAmount: Double
+
+    static let `default` = EarningsConfiguration(
+        salaryAmount: 85_000,
+        payFrequency: .annual,
+        filingStatus: .single,
+        location: .newYorkCity,
+        workHoursPerDay: 8,
+        workDaysPerWeek: 5,
+        workStartMinutes: 9 * 60,
+        annualBonusAmount: 0,
+        monthlyPretaxBenefitsAmount: 0,
+        retirementContributionPercent: 0,
+        savingsGoalAmount: 10_000
+    )
+
+    var annualBaseIncome: Double {
+        switch payFrequency {
+        case .annual:
+            return salaryAmount
+        case .monthly:
+            return salaryAmount * 12
+        case .hourly:
+            return salaryAmount * Double(workHoursPerDay) * Double(workDaysPerWeek) * 52
+        }
+    }
+
+    var annualGrossIncome: Double {
+        annualBaseIncome + annualBonusAmount
+    }
+
+    var annualPretaxBenefits: Double {
+        monthlyPretaxBenefitsAmount * 12
+    }
+
+    var annualRetirementContribution: Double {
+        let uncapped = annualGrossIncome * (Double(retirementContributionPercent) / 100)
+        return min(uncapped, min(annualGrossIncome, Self.retirementDeferralLimit))
+    }
+
+    var annualTaxableWagesForFederal: Double {
+        max(annualGrossIncome - annualPretaxBenefits - annualRetirementContribution, 0)
+    }
+
+    var annualTaxableWagesForFICA: Double {
+        max(annualGrossIncome - annualPretaxBenefits, 0)
+    }
+
+    var annualTaxableWagesForPennsylvania: Double {
+        max(annualGrossIncome - annualPretaxBenefits, 0)
+    }
+
+    var workDaysPerYear: Double {
+        Double(workDaysPerWeek) * 52
+    }
+
+    var workDaySeconds: Double {
+        Double(workHoursPerDay) * 3600
+    }
+
+    var annualWorkSeconds: Double {
+        workDaysPerYear * workDaySeconds
+    }
+
+    var compactSummary: String {
+        "\(annualGrossIncome.compactCurrency) · \(location.shortName)"
+    }
+
+    var workWeekSummary: String {
+        switch workDaysPerWeek {
+        case 1:
+            return "Monday only"
+        case 2:
+            return "Mon–Tue"
+        case 3:
+            return "Mon–Wed"
+        case 4:
+            return "Mon–Thu"
+        case 5:
+            return "Mon–Fri"
+        case 6:
+            return "Mon–Sat"
+        default:
+            return "Every day"
+        }
+    }
+
+    func startTimeDate(anchor: Date = .now, calendar: Calendar) -> Date {
+        let dayStart = calendar.startOfDay(for: anchor)
+        return calendar.date(byAdding: .minute, value: workStartMinutes, to: dayStart) ?? dayStart
+    }
+
+    func startTimeDate(calendar: Calendar) -> Date {
+        startTimeDate(anchor: .now, calendar: calendar)
+    }
+
+    func scheduledStart(on workDate: Date, calendar: Calendar) -> Date {
+        let dayStart = calendar.startOfDay(for: workDate)
+        return calendar.date(byAdding: .minute, value: workStartMinutes, to: dayStart) ?? dayStart
+    }
+
+    func scheduledEnd(on workDate: Date, calendar: Calendar) -> Date {
+        scheduledStart(on: workDate, calendar: calendar)
+            .addingTimeInterval(workDaySeconds)
+    }
+
+    func isWorkday(on date: Date, calendar: Calendar) -> Bool {
+        let weekday = calendar.component(.weekday, from: date)
+        return orderedWorkdays.contains(weekday)
+    }
+
+    func nextWorkDate(from date: Date, calendar: Calendar) -> Date {
+        let referenceDay = calendar.startOfDay(for: date)
+
+        for offset in 0..<14 {
+            guard let candidate = calendar.date(byAdding: .day, value: offset, to: referenceDay) else { continue }
+            guard isWorkday(on: candidate, calendar: calendar) else { continue }
+
+            if offset == 0, date >= scheduledEnd(on: candidate, calendar: calendar) {
+                continue
+            }
+
+            return calendar.startOfDay(for: candidate)
+        }
+
+        return calendar.startOfDay(for: date)
+    }
+
+    private var orderedWorkdays: [Int] {
+        let mondayFirstWeekdays = [2, 3, 4, 5, 6, 7, 1]
+        return Array(mondayFirstWeekdays.prefix(max(1, min(workDaysPerWeek, 7))))
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case salaryAmount
+        case payFrequency
+        case filingStatus
+        case location
+        case workHoursPerDay
+        case workDaysPerWeek
+        case workStartMinutes
+        case annualBonusAmount
+        case monthlyPretaxBenefitsAmount
+        case retirementContributionPercent
+        case savingsGoalAmount
+    }
+
+    init(
+        salaryAmount: Double,
+        payFrequency: PayFrequency,
+        filingStatus: FilingStatus,
+        location: LocationOption,
+        workHoursPerDay: Int,
+        workDaysPerWeek: Int,
+        workStartMinutes: Int,
+        annualBonusAmount: Double,
+        monthlyPretaxBenefitsAmount: Double,
+        retirementContributionPercent: Int,
+        savingsGoalAmount: Double
+    ) {
+        self.salaryAmount = salaryAmount
+        self.payFrequency = payFrequency
+        self.filingStatus = filingStatus
+        self.location = location
+        self.workHoursPerDay = workHoursPerDay
+        self.workDaysPerWeek = workDaysPerWeek
+        self.workStartMinutes = workStartMinutes
+        self.annualBonusAmount = annualBonusAmount
+        self.monthlyPretaxBenefitsAmount = monthlyPretaxBenefitsAmount
+        self.retirementContributionPercent = retirementContributionPercent
+        self.savingsGoalAmount = savingsGoalAmount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.default
+
+        salaryAmount = try container.decodeIfPresent(Double.self, forKey: .salaryAmount) ?? defaults.salaryAmount
+        payFrequency = try container.decodeIfPresent(PayFrequency.self, forKey: .payFrequency) ?? defaults.payFrequency
+        filingStatus = try container.decodeIfPresent(FilingStatus.self, forKey: .filingStatus) ?? defaults.filingStatus
+        location = try container.decodeIfPresent(LocationOption.self, forKey: .location) ?? defaults.location
+        workHoursPerDay = try container.decodeIfPresent(Int.self, forKey: .workHoursPerDay) ?? defaults.workHoursPerDay
+        workDaysPerWeek = try container.decodeIfPresent(Int.self, forKey: .workDaysPerWeek) ?? defaults.workDaysPerWeek
+        workStartMinutes = try container.decodeIfPresent(Int.self, forKey: .workStartMinutes) ?? defaults.workStartMinutes
+        annualBonusAmount = try container.decodeIfPresent(Double.self, forKey: .annualBonusAmount) ?? defaults.annualBonusAmount
+        monthlyPretaxBenefitsAmount = try container.decodeIfPresent(Double.self, forKey: .monthlyPretaxBenefitsAmount) ?? defaults.monthlyPretaxBenefitsAmount
+        retirementContributionPercent = try container.decodeIfPresent(Int.self, forKey: .retirementContributionPercent) ?? defaults.retirementContributionPercent
+        savingsGoalAmount = try container.decodeIfPresent(Double.self, forKey: .savingsGoalAmount) ?? defaults.savingsGoalAmount
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(salaryAmount, forKey: .salaryAmount)
+        try container.encode(payFrequency, forKey: .payFrequency)
+        try container.encode(filingStatus, forKey: .filingStatus)
+        try container.encode(location, forKey: .location)
+        try container.encode(workHoursPerDay, forKey: .workHoursPerDay)
+        try container.encode(workDaysPerWeek, forKey: .workDaysPerWeek)
+        try container.encode(workStartMinutes, forKey: .workStartMinutes)
+        try container.encode(annualBonusAmount, forKey: .annualBonusAmount)
+        try container.encode(monthlyPretaxBenefitsAmount, forKey: .monthlyPretaxBenefitsAmount)
+        try container.encode(retirementContributionPercent, forKey: .retirementContributionPercent)
+        try container.encode(savingsGoalAmount, forKey: .savingsGoalAmount)
+    }
+}
+
+struct IncomeStream: Codable, Equatable, Identifiable {
+    let id: UUID
+    var name: String
+    var configuration: EarningsConfiguration
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        configuration: EarningsConfiguration
+    ) {
+        self.id = id
+        self.name = name
+        self.configuration = configuration
+    }
+
+    static func primary(configuration: EarningsConfiguration) -> IncomeStream {
+        IncomeStream(
+            id: ClockedConstants.primaryStreamID,
+            name: "Main Income",
+            configuration: configuration
+        )
+    }
+}
+
+struct ClockedWorkspace: Codable {
+    var streams: [IncomeStream]
+    var selectedStreamID: UUID
+}
+
+struct WorkSession: Codable, Equatable, Identifiable {
+    let id: UUID
+    let streamID: UUID
+    let streamName: String
+    let configuration: EarningsConfiguration
+    let workDate: Date
+    let createdAt: Date
+    var pausedAt: Date?
+    var accumulatedPausedSeconds: Double
+
+    init(
+        id: UUID = UUID(),
+        streamID: UUID,
+        streamName: String,
+        configuration: EarningsConfiguration,
+        workDate: Date,
+        createdAt: Date = .now,
+        pausedAt: Date? = nil,
+        accumulatedPausedSeconds: Double = 0
+    ) {
+        self.id = id
+        self.streamID = streamID
+        self.streamName = streamName
+        self.configuration = configuration
+        self.workDate = workDate
+        self.createdAt = createdAt
+        self.pausedAt = pausedAt
+        self.accumulatedPausedSeconds = accumulatedPausedSeconds
+    }
+
+    var isPaused: Bool {
+        pausedAt != nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case streamID
+        case streamName
+        case configuration
+        case workDate
+        case createdAt
+        case pausedAt
+        case accumulatedPausedSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        streamID = try container.decodeIfPresent(UUID.self, forKey: .streamID) ?? ClockedConstants.primaryStreamID
+        streamName = try container.decodeIfPresent(String.self, forKey: .streamName) ?? "Main Income"
+        configuration = try container.decode(EarningsConfiguration.self, forKey: .configuration)
+        workDate = try container.decode(Date.self, forKey: .workDate)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        pausedAt = try container.decodeIfPresent(Date.self, forKey: .pausedAt)
+        accumulatedPausedSeconds = try container.decodeIfPresent(Double.self, forKey: .accumulatedPausedSeconds) ?? 0
+    }
+}
+
+struct WorkdayRecord: Codable, Equatable, Identifiable {
+    let id: UUID
+    let streamID: UUID
+    let streamName: String
+    let workDate: Date
+    let completedAt: Date
+    let configuration: EarningsConfiguration
+    let grossEarned: Double
+    let netEarned: Double
+    let elapsedWorkSeconds: Double
+
+    init(
+        id: UUID = UUID(),
+        streamID: UUID,
+        streamName: String,
+        workDate: Date,
+        completedAt: Date = .now,
+        configuration: EarningsConfiguration,
+        grossEarned: Double,
+        netEarned: Double,
+        elapsedWorkSeconds: Double
+    ) {
+        self.id = id
+        self.streamID = streamID
+        self.streamName = streamName
+        self.workDate = workDate
+        self.completedAt = completedAt
+        self.configuration = configuration
+        self.grossEarned = grossEarned
+        self.netEarned = netEarned
+        self.elapsedWorkSeconds = elapsedWorkSeconds
+    }
+}
+
+struct EarningsEstimate: Equatable {
+    let annualBasePay: Double
+    let annualBonus: Double
+    let annualGross: Double
+    let annualPretaxBenefits: Double
+    let annualRetirementContribution: Double
+    let annualNet: Double
+    let grossDaily: Double
+    let netDaily: Double
+    let grossPerSecond: Double
+    let netPerSecond: Double
+    let taxableFederalIncome: Double
+    let federalIncomeTax: Double
+    let stateIncomeTax: Double
+    let localIncomeTax: Double
+    let socialSecurityTax: Double
+    let medicareTax: Double
+    let taxYear: Int
+
+    var totalTax: Double {
+        federalIncomeTax + stateIncomeTax + localIncomeTax + socialSecurityTax + medicareTax
+    }
+
+    var effectiveTaxRate: Double {
+        guard annualGross > 0 else { return 0 }
+        return totalTax / annualGross
+    }
+}
+
+enum SessionStatus {
+    case scheduled
+    case live
+    case paused
+    case complete
+}
+
+struct SessionSnapshot {
+    let session: WorkSession
+    let estimate: EarningsEstimate
+    let status: SessionStatus
+    let now: Date
+    let scheduledStart: Date
+    let scheduledEnd: Date
+    let elapsedWorkSeconds: Double
+    let remainingSeconds: Double
+    let grossEarned: Double
+    let netEarned: Double
+
+    var progress: Double {
+        guard session.configuration.workDaySeconds > 0 else { return 0 }
+        return min(max(elapsedWorkSeconds / session.configuration.workDaySeconds, 0), 1)
+    }
+
+    var elapsedClockText: String {
+        elapsedWorkSeconds.clockString
+    }
+
+    var remainingText: String {
+        switch status {
+        case .scheduled:
+            return "Starts \(scheduledStart.formatted(date: .omitted, time: .shortened))"
+        case .complete:
+            return "Done"
+        case .paused, .live:
+            return "\(remainingSeconds.shortDurationString) left"
+        }
+    }
+
+    var statusText: String {
+        switch status {
+        case .scheduled:
+            return "Scheduled"
+        case .live:
+            return "Live"
+        case .paused:
+            return "Paused"
+        case .complete:
+            return "Complete"
+        }
+    }
+
+    var statusColor: Color {
+        switch status {
+        case .scheduled:
+            return ClockedTheme.amber
+        case .live:
+            return ClockedTheme.green
+        case .paused:
+            return ClockedTheme.mutedText
+        case .complete:
+            return ClockedTheme.blue
+        }
+    }
+
+    var amountParts: CurrencyAmountParts {
+        CurrencyAmountParts(amount: netEarned)
+    }
+
+    var workWindowLabel: String {
+        let start = scheduledStart.formatted(date: .omitted, time: .shortened)
+        let end = scheduledEnd.formatted(date: .omitted, time: .shortened)
+        return "\(start) – \(end)"
+    }
+
+    var dayLabel: String {
+        session.workDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
+}
+
+struct WeeklySummary: Equatable {
+    let streamName: String
+    let weekStart: Date
+    let weekEnd: Date
+    let netTotal: Double
+    let grossTotal: Double
+    let daysWorked: Int
+    let totalHours: Double
+
+    var averageDailyNet: Double {
+        guard daysWorked > 0 else { return 0 }
+        return netTotal / Double(daysWorked)
+    }
+
+    var weekLabel: String {
+        let formatter = DateIntervalFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: weekStart, to: weekEnd)
+    }
+
+    var shareText: String {
+        "\(streamName) earned \(netTotal.currencyString) take-home this week across \(daysWorked) workdays."
+    }
+}
+
+struct SavingsGoalProgress: Equatable {
+    let targetAmount: Double
+    let currentAmount: Double
+
+    var remainingAmount: Double {
+        max(targetAmount - currentAmount, 0)
+    }
+
+    var progress: Double {
+        guard targetAmount > 0 else { return 0 }
+        return min(max(currentAmount / targetAmount, 0), 1)
+    }
+
+    var isComplete: Bool {
+        currentAmount >= targetAmount && targetAmount > 0
+    }
+}
+
+struct AchievementStatus: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let detail: String
+    let isUnlocked: Bool
+    let progress: Double
+    let progressText: String
+}
+
+struct SpendingComparison: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let amount: Double
+    let timeToEarnSeconds: Double
+    let currentAmountEarned: Double
+
+    var isCoveredToday: Bool {
+        currentAmountEarned >= amount
+    }
+
+    var headline: String {
+        if isCoveredToday {
+            return "Covered already today"
+        }
+
+        return "Earned in \(timeToEarnSeconds.shortDurationString)"
+    }
+
+    var detail: String {
+        amount.currencyString
+    }
+}
+
+struct MilestoneStatus: Identifiable {
+    let id: String
+    let title: String
+    let targetAmount: Double
+    let currentAmount: Double
+    let perSecond: Double
+
+    var statusText: String {
+        guard perSecond > 0 else { return "--" }
+
+        let secondsToReach = targetAmount / perSecond
+        if currentAmount >= targetAmount {
+            return "earned in \(secondsToReach.milestoneString)"
+        }
+
+        let remainingSeconds = max((targetAmount - currentAmount) / perSecond, 0)
+        return "~\(remainingSeconds.milestoneString) away"
+    }
+
+    var tint: Color {
+        currentAmount >= targetAmount ? ClockedTheme.green : ClockedTheme.mutedText
+    }
+}
+
+struct CurrencyAmountParts {
+    let major: String
+    let minor: String
+
+    init(amount: Double) {
+        let totalCents = max(Int((amount * 100).rounded()), 0)
+        let dollars = totalCents / 100
+        let cents = totalCents % 100
+
+        major = "$\(dollars.groupedNumber)"
+        minor = String(format: ".%02d", cents)
+    }
+}
+
+struct TaxBreakdownRow: Identifiable {
+    let id: String
+    let title: String
+    let amount: Double
+
+    var formattedAmount: String {
+        amount.currencyString
+    }
+}
+
+extension String {
+    var currencyNumber: Double {
+        let filtered = filter { $0.isNumber || $0 == "." }
+        return Double(filtered) ?? 0
+    }
+}
+
+extension Double {
+    var currencyString: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: self)) ?? "$0.00"
+    }
+
+    var compactCurrency: String {
+        if self >= 1000 {
+            let value = self / 1000
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = value < 10 ? 1 : 0
+            let text = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+            return "$\(text)k"
+        }
+
+        return currencyString
+    }
+
+    var groupedCurrencyInput: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = floor(self) == self ? 0 : 2
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+
+    var clockString: String {
+        let totalSeconds = max(Int(rounded()), 0)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    var shortDurationString: String {
+        let totalSeconds = max(Int(rounded()), 0)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        if hours > 0 {
+            return minutes > 0 ? "\(hours)h \(minutes)m" : "\(hours)h"
+        }
+
+        if minutes > 0 {
+            return seconds > 0 ? "\(minutes)m \(seconds)s" : "\(minutes)m"
+        }
+
+        return "\(seconds)s"
+    }
+
+    var milestoneString: String {
+        shortDurationString
+    }
+}
+
+extension Int {
+    var groupedNumber: String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+    }
+}
