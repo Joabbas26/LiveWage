@@ -1,0 +1,694 @@
+{
+  "taxYear": 2025,
+  "federal": {
+    "standardDeductions": {
+      "single": 15750,
+      "marriedJoint": 31500,
+      "headOfHousehold": 23625
+    },
+    "brackets": {
+      "single": [
+        { "lowerBound": 0, "upperBound": 11925, "baseTax": 0, "marginalRate": 0.1 },
+        { "lowerBound": 11925, "upperBound": 48475, "baseTax": 1192.5, "marginalRate": 0.12 },
+        { "lowerBound": 48475, "upperBound": 103350, "baseTax": 5578.5, "marginalRate": 0.22 },
+        { "lowerBound": 103350, "upperBound": 197300, "baseTax": 17651, "marginalRate": 0.24 },
+        { "lowerBound": 197300, "upperBound": 250525, "baseTax": 40199, "marginalRate": 0.32 },
+        { "lowerBound": 250525, "upperBound": 626350, "baseTax": 57231, "marginalRate": 0.35 },
+        { "lowerBound": 626350, "upperBound": null, "baseTax": 188769.75, "marginalRate": 0.37 }
+      ],
+      "marriedJoint": [
+        { "lowerBound": 0, "upperBound": 23850, "baseTax": 0, "marginalRate": 0.1 },
+        { "lowerBound": 23850, "upperBound": 96950, "baseTax": 2385, "marginalRate": 0.12 },
+        { "lowerBound": 96950, "upperBound": 206700, "baseTax": 11157, "marginalRate": 0.22 },
+        { "lowerBound": 206700, "upperBound": 394600, "baseTax": 35302, "marginalRate": 0.24 },
+        { "lowerBound": 394600, "upperBound": 501050, "baseTax": 80398, "marginalRate": 0.32 },
+        { "lowerBound": 501050, "upperBound": 751600, "baseTax": 114462, "marginalRate": 0.35 },
+        { "lowerBound": 751600, "upperBound": null, "baseTax": 202154.5, "marginalRate": 0.37 }
+      ],
+      "headOfHousehold": [
+        { "lowerBound": 0, "upperBound": 17000, "baseTax": 0, "marginalRate": 0.1 },
+        { "lowerBound": 17000, "upperBound": 64850, "baseTax": 1700, "marginalRate": 0.12 },
+        { "lowerBound": 64850, "upperBound": 103350, "baseTax": 7442, "marginalRate": 0.22 },
+        { "lowerBound": 103350, "upperBound": 197300, "baseTax": 15912, "marginalRate": 0.24 },
+        { "lowerBound": 197300, "upperBound": 250500, "baseTax": 38460, "marginalRate": 0.32 },
+        { "lowerBound": 250500, "upperBound": 626350, "baseTax": 55484, "marginalRate": 0.35 },
+        { "lowerBound": 626350, "upperBound": null, "baseTax": 187031.5, "marginalRate": 0.37 }
+      ]
+    }
+  },
+  "fica": {
+    "socialSecurityRate": 0.062,
+    "socialSecurityWageBase": 176100,
+    "medicareRate": 0.0145,
+    "additionalMedicareRate": 0.009,
+    "additionalMedicareThresholds": {
+      "single": 200000,
+      "marriedJoint": 250000,
+      "headOfHousehold": 200000
+    }
+  },
+  "locations": [
+    {
+      "id": "newYork",
+      "displayName": "New York City, NY",
+      "shortName": "NYC",
+      "stateCode": "NY",
+      "taxLabel": "NY state + NYC resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, New York State, and NYC resident tax rules.",
+      "stateTaxTitle": "NY state income tax",
+      "localTaxTitle": "NYC resident tax",
+      "stateRule": {
+        "strategy": "newYorkRecapture",
+        "taxableBase": "taxableCompensation",
+        "standardDeductions": {
+          "single": 8000,
+          "marriedJoint": 16050,
+          "headOfHousehold": 11200
+        },
+        "highIncomeFlatThreshold": 25000000,
+        "highIncomeFlatRate": 0.109,
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 8500, "baseTax": 0, "marginalRate": 0.04 },
+            { "lowerBound": 8500, "upperBound": 11700, "baseTax": 340, "marginalRate": 0.045 },
+            { "lowerBound": 11700, "upperBound": 13900, "baseTax": 484, "marginalRate": 0.0525 },
+            { "lowerBound": 13900, "upperBound": 80650, "baseTax": 600, "marginalRate": 0.055 },
+            { "lowerBound": 80650, "upperBound": 215400, "baseTax": 4271, "marginalRate": 0.06 },
+            { "lowerBound": 215400, "upperBound": 1077550, "baseTax": 12356, "marginalRate": 0.0685 },
+            { "lowerBound": 1077550, "upperBound": 5000000, "baseTax": 71413, "marginalRate": 0.0965 },
+            { "lowerBound": 5000000, "upperBound": 25000000, "baseTax": 449929, "marginalRate": 0.103 },
+            { "lowerBound": 25000000, "upperBound": null, "baseTax": 2509929, "marginalRate": 0.109 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 17150, "baseTax": 0, "marginalRate": 0.04 },
+            { "lowerBound": 17150, "upperBound": 23600, "baseTax": 686, "marginalRate": 0.045 },
+            { "lowerBound": 23600, "upperBound": 27900, "baseTax": 976, "marginalRate": 0.0525 },
+            { "lowerBound": 27900, "upperBound": 161550, "baseTax": 1202, "marginalRate": 0.055 },
+            { "lowerBound": 161550, "upperBound": 323200, "baseTax": 8553, "marginalRate": 0.06 },
+            { "lowerBound": 323200, "upperBound": 2155350, "baseTax": 18252, "marginalRate": 0.0685 },
+            { "lowerBound": 2155350, "upperBound": 5000000, "baseTax": 143754, "marginalRate": 0.0965 },
+            { "lowerBound": 5000000, "upperBound": 25000000, "baseTax": 418263, "marginalRate": 0.103 },
+            { "lowerBound": 25000000, "upperBound": null, "baseTax": 2478263, "marginalRate": 0.109 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 12800, "baseTax": 0, "marginalRate": 0.04 },
+            { "lowerBound": 12800, "upperBound": 17650, "baseTax": 512, "marginalRate": 0.045 },
+            { "lowerBound": 17650, "upperBound": 20900, "baseTax": 730, "marginalRate": 0.0525 },
+            { "lowerBound": 20900, "upperBound": 107650, "baseTax": 901, "marginalRate": 0.055 },
+            { "lowerBound": 107650, "upperBound": 269300, "baseTax": 5672, "marginalRate": 0.06 },
+            { "lowerBound": 269300, "upperBound": 1616450, "baseTax": 15371, "marginalRate": 0.0685 },
+            { "lowerBound": 1616450, "upperBound": 5000000, "baseTax": 107651, "marginalRate": 0.0965 },
+            { "lowerBound": 5000000, "upperBound": 25000000, "baseTax": 434163, "marginalRate": 0.103 },
+            { "lowerBound": 25000000, "upperBound": null, "baseTax": 2494163, "marginalRate": 0.109 }
+          ]
+        },
+        "recapture": {
+          "single": {
+            "blendStartAGI": 107650,
+            "blendWidth": 50000,
+            "blendUpperTaxableIncome": 215400,
+            "blendFlatRate": 0.06,
+            "rampWidth": 50000,
+            "bands": [
+              { "taxableIncomeUpperBound": 1077550, "lowerBound": 215400, "baseAmount": 568, "incrementalBenefit": 1831 },
+              { "taxableIncomeUpperBound": 5000000, "lowerBound": 1077550, "baseAmount": 2399, "incrementalBenefit": 30172 },
+              { "taxableIncomeUpperBound": null, "lowerBound": 5000000, "baseAmount": 32571, "incrementalBenefit": 32500 }
+            ]
+          },
+          "marriedJoint": {
+            "blendStartAGI": 107650,
+            "blendWidth": 50000,
+            "blendUpperTaxableIncome": 161550,
+            "blendFlatRate": 0.055,
+            "rampWidth": 50000,
+            "bands": [
+              { "taxableIncomeUpperBound": 323200, "lowerBound": 161550, "baseAmount": 333, "incrementalBenefit": 807 },
+              { "taxableIncomeUpperBound": 2155350, "lowerBound": 323200, "baseAmount": 1140, "incrementalBenefit": 2747 },
+              { "taxableIncomeUpperBound": 5000000, "lowerBound": 2155350, "baseAmount": 3887, "incrementalBenefit": 60350 },
+              { "taxableIncomeUpperBound": null, "lowerBound": 5000000, "baseAmount": 64237, "incrementalBenefit": 32500 }
+            ]
+          },
+          "headOfHousehold": {
+            "blendStartAGI": 107650,
+            "blendWidth": 50000,
+            "blendUpperTaxableIncome": 269300,
+            "blendFlatRate": 0.06,
+            "rampWidth": 50000,
+            "bands": [
+              { "taxableIncomeUpperBound": 1616450, "lowerBound": 269300, "baseAmount": 787, "incrementalBenefit": 2289 },
+              { "taxableIncomeUpperBound": 5000000, "lowerBound": 1616450, "baseAmount": 3076, "incrementalBenefit": 45261 },
+              { "taxableIncomeUpperBound": null, "lowerBound": 5000000, "baseAmount": 48337, "incrementalBenefit": 32500 }
+            ]
+          }
+        }
+      },
+      "localRule": {
+        "strategy": "progressive",
+        "taxableBase": "taxableCompensation",
+        "standardDeductions": {
+          "single": 8000,
+          "marriedJoint": 16050,
+          "headOfHousehold": 11200
+        },
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 12000, "baseTax": 0, "marginalRate": 0.03078 },
+            { "lowerBound": 12000, "upperBound": 25000, "baseTax": 369, "marginalRate": 0.03762 },
+            { "lowerBound": 25000, "upperBound": 50000, "baseTax": 858, "marginalRate": 0.03819 },
+            { "lowerBound": 50000, "upperBound": null, "baseTax": 1813, "marginalRate": 0.03876 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 21600, "baseTax": 0, "marginalRate": 0.03078 },
+            { "lowerBound": 21600, "upperBound": 45000, "baseTax": 665, "marginalRate": 0.03762 },
+            { "lowerBound": 45000, "upperBound": 90000, "baseTax": 1545, "marginalRate": 0.03819 },
+            { "lowerBound": 90000, "upperBound": null, "baseTax": 3264, "marginalRate": 0.03876 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 14400, "baseTax": 0, "marginalRate": 0.03078 },
+            { "lowerBound": 14400, "upperBound": 30000, "baseTax": 443, "marginalRate": 0.03762 },
+            { "lowerBound": 30000, "upperBound": 60000, "baseTax": 1030, "marginalRate": 0.03819 },
+            { "lowerBound": 60000, "upperBound": null, "baseTax": 2176, "marginalRate": 0.03876 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "losAngeles",
+      "displayName": "California",
+      "shortName": "CA",
+      "stateCode": "CA",
+      "taxLabel": "CA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and California resident tax rules.",
+      "stateTaxTitle": "CA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "progressiveWithCredit",
+        "taxableBase": "taxableCompensation",
+        "standardDeductions": {
+          "single": 5706,
+          "marriedJoint": 11412,
+          "headOfHousehold": 11412
+        },
+        "personalCredits": {
+          "single": 153,
+          "marriedJoint": 306,
+          "headOfHousehold": 153
+        },
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 11079, "baseTax": 0, "marginalRate": 0.01 },
+            { "lowerBound": 11079, "upperBound": 26264, "baseTax": 110.79, "marginalRate": 0.02 },
+            { "lowerBound": 26264, "upperBound": 41452, "baseTax": 414.49, "marginalRate": 0.04 },
+            { "lowerBound": 41452, "upperBound": 57542, "baseTax": 1022.01, "marginalRate": 0.06 },
+            { "lowerBound": 57542, "upperBound": 72724, "baseTax": 1987.41, "marginalRate": 0.08 },
+            { "lowerBound": 72724, "upperBound": 371479, "baseTax": 3201.97, "marginalRate": 0.093 },
+            { "lowerBound": 371479, "upperBound": 445771, "baseTax": 30986.19, "marginalRate": 0.103 },
+            { "lowerBound": 445771, "upperBound": 742953, "baseTax": 38638.27, "marginalRate": 0.113 },
+            { "lowerBound": 742953, "upperBound": null, "baseTax": 72219.84, "marginalRate": 0.123 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 22158, "baseTax": 0, "marginalRate": 0.01 },
+            { "lowerBound": 22158, "upperBound": 52528, "baseTax": 221.58, "marginalRate": 0.02 },
+            { "lowerBound": 52528, "upperBound": 82904, "baseTax": 828.98, "marginalRate": 0.04 },
+            { "lowerBound": 82904, "upperBound": 115084, "baseTax": 2044.02, "marginalRate": 0.06 },
+            { "lowerBound": 115084, "upperBound": 145448, "baseTax": 3974.82, "marginalRate": 0.08 },
+            { "lowerBound": 145448, "upperBound": 742958, "baseTax": 6403.94, "marginalRate": 0.093 },
+            { "lowerBound": 742958, "upperBound": 891542, "baseTax": 61972.37, "marginalRate": 0.103 },
+            { "lowerBound": 891542, "upperBound": 1485906, "baseTax": 77276.52, "marginalRate": 0.113 },
+            { "lowerBound": 1485906, "upperBound": null, "baseTax": 144439.65, "marginalRate": 0.123 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 22173, "baseTax": 0, "marginalRate": 0.01 },
+            { "lowerBound": 22173, "upperBound": 52530, "baseTax": 221.73, "marginalRate": 0.02 },
+            { "lowerBound": 52530, "upperBound": 67716, "baseTax": 828.87, "marginalRate": 0.04 },
+            { "lowerBound": 67716, "upperBound": 83805, "baseTax": 1436.31, "marginalRate": 0.06 },
+            { "lowerBound": 83805, "upperBound": 98990, "baseTax": 2401.65, "marginalRate": 0.08 },
+            { "lowerBound": 98990, "upperBound": 505208, "baseTax": 3616.45, "marginalRate": 0.093 },
+            { "lowerBound": 505208, "upperBound": 606251, "baseTax": 41394.72, "marginalRate": 0.103 },
+            { "lowerBound": 606251, "upperBound": 1010417, "baseTax": 51802.15, "marginalRate": 0.113 },
+            { "lowerBound": 1010417, "upperBound": null, "baseTax": 97472.91, "marginalRate": 0.123 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chicago",
+      "displayName": "Illinois",
+      "shortName": "IL",
+      "stateCode": "IL",
+      "taxLabel": "IL resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and Illinois resident tax rules.",
+      "stateTaxTitle": "IL state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flatWithExemption",
+        "taxableBase": "taxableCompensation",
+        "flatRate": 0.0495,
+        "exemption": {
+          "amount": 2850,
+          "singleThreshold": 250000,
+          "marriedJointThreshold": 500000
+        }
+      }
+    },
+    {
+      "id": "austin",
+      "displayName": "Texas",
+      "shortName": "TX",
+      "stateCode": "TX",
+      "taxLabel": "TX resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because the selected state does not levy personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "miami",
+      "displayName": "Florida",
+      "shortName": "FL",
+      "stateCode": "FL",
+      "taxLabel": "FL resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because the selected state does not levy personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "seattle",
+      "displayName": "Washington",
+      "shortName": "WA",
+      "stateCode": "WA",
+      "taxLabel": "WA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because the selected state does not levy personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "massachusetts",
+      "displayName": "Massachusetts",
+      "shortName": "MA",
+      "stateCode": "MA",
+      "taxLabel": "MA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and Massachusetts resident tax rules.",
+      "stateTaxTitle": "MA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flatWithSurtax",
+        "taxableBase": "taxableCompensation",
+        "flatRate": 0.05,
+        "standardDeductions": {
+          "single": 4400,
+          "marriedJoint": 8800,
+          "headOfHousehold": 6800
+        },
+        "surtaxThreshold": 1083150,
+        "surtaxRate": 0.04
+      }
+    },
+    {
+      "id": "colorado",
+      "displayName": "Colorado",
+      "shortName": "CO",
+      "stateCode": "CO",
+      "taxLabel": "CO resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA rules, with Colorado income tax modeled from federal taxable income.",
+      "stateTaxTitle": "CO state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.044
+      }
+    },
+    {
+      "id": "pennsylvania",
+      "displayName": "Pennsylvania",
+      "shortName": "PA",
+      "stateCode": "PA",
+      "taxLabel": "PA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and Pennsylvania resident tax rules.",
+      "stateTaxTitle": "PA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "pennsylvaniaWages",
+        "flatRate": 0.0307
+      }
+    },
+    {
+      "id": "alaska",
+      "displayName": "Alaska",
+      "shortName": "AK",
+      "stateCode": "AK",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because Alaska does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "arizona",
+      "displayName": "Arizona",
+      "shortName": "AZ",
+      "stateCode": "AZ",
+      "taxLabel": "AZ resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Arizona resident income tax estimate.",
+      "stateTaxTitle": "AZ state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.025
+      }
+    },
+    {
+      "id": "georgia",
+      "displayName": "Georgia",
+      "shortName": "GA",
+      "stateCode": "GA",
+      "taxLabel": "GA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Georgia resident income tax estimate.",
+      "stateTaxTitle": "GA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.0519
+      }
+    },
+    {
+      "id": "idaho",
+      "displayName": "Idaho",
+      "shortName": "ID",
+      "stateCode": "ID",
+      "taxLabel": "ID resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Idaho resident income tax estimate.",
+      "stateTaxTitle": "ID state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "progressive",
+        "taxableBase": "federalTaxableIncome",
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 4811, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 4811, "upperBound": null, "baseTax": 0, "marginalRate": 0.053 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 9622, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 9622, "upperBound": null, "baseTax": 0, "marginalRate": 0.053 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 4811, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 4811, "upperBound": null, "baseTax": 0, "marginalRate": 0.053 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "indiana",
+      "displayName": "Indiana",
+      "shortName": "IN",
+      "stateCode": "IN",
+      "taxLabel": "IN resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Indiana resident income tax estimate.",
+      "stateTaxTitle": "IN state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.03
+      }
+    },
+    {
+      "id": "iowa",
+      "displayName": "Iowa",
+      "shortName": "IA",
+      "stateCode": "IA",
+      "taxLabel": "IA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Iowa resident income tax estimate.",
+      "stateTaxTitle": "IA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.038
+      }
+    },
+    {
+      "id": "kentucky",
+      "displayName": "Kentucky",
+      "shortName": "KY",
+      "stateCode": "KY",
+      "taxLabel": "KY resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Kentucky resident income tax estimate.",
+      "stateTaxTitle": "KY state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.04
+      }
+    },
+    {
+      "id": "louisiana",
+      "displayName": "Louisiana",
+      "shortName": "LA",
+      "stateCode": "LA",
+      "taxLabel": "LA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Louisiana resident income tax estimate.",
+      "stateTaxTitle": "LA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.03
+      }
+    },
+    {
+      "id": "michigan",
+      "displayName": "Michigan",
+      "shortName": "MI",
+      "stateCode": "MI",
+      "taxLabel": "MI resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Michigan resident income tax estimate.",
+      "stateTaxTitle": "MI state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.0425
+      }
+    },
+    {
+      "id": "mississippi",
+      "displayName": "Mississippi",
+      "shortName": "MS",
+      "stateCode": "MS",
+      "taxLabel": "MS resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Mississippi resident income tax estimate.",
+      "stateTaxTitle": "MS state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "progressive",
+        "taxableBase": "federalTaxableIncome",
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 10000, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 10000, "upperBound": null, "baseTax": 0, "marginalRate": 0.044 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 20000, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 20000, "upperBound": null, "baseTax": 0, "marginalRate": 0.044 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 10000, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 10000, "upperBound": null, "baseTax": 0, "marginalRate": 0.044 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nevada",
+      "displayName": "Nevada",
+      "shortName": "NV",
+      "stateCode": "NV",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because Nevada does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "newHampshire",
+      "displayName": "New Hampshire",
+      "shortName": "NH",
+      "stateCode": "NH",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because New Hampshire does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "northCarolina",
+      "displayName": "North Carolina",
+      "shortName": "NC",
+      "stateCode": "NC",
+      "taxLabel": "NC resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple North Carolina resident income tax estimate.",
+      "stateTaxTitle": "NC state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.0425
+      }
+    },
+    {
+      "id": "ohio",
+      "displayName": "Ohio",
+      "shortName": "OH",
+      "stateCode": "OH",
+      "taxLabel": "OH resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Ohio resident income tax estimate.",
+      "stateTaxTitle": "OH state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "progressive",
+        "taxableBase": "federalTaxableIncome",
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 26050, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 26050, "upperBound": 100000, "baseTax": 0, "marginalRate": 0.0275 },
+            { "lowerBound": 100000, "upperBound": null, "baseTax": 2033.63, "marginalRate": 0.03125 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 26050, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 26050, "upperBound": 100000, "baseTax": 0, "marginalRate": 0.0275 },
+            { "lowerBound": 100000, "upperBound": null, "baseTax": 2033.63, "marginalRate": 0.03125 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 26050, "baseTax": 0, "marginalRate": 0.0 },
+            { "lowerBound": 26050, "upperBound": 100000, "baseTax": 0, "marginalRate": 0.0275 },
+            { "lowerBound": 100000, "upperBound": null, "baseTax": 2033.63, "marginalRate": 0.03125 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "southDakota",
+      "displayName": "South Dakota",
+      "shortName": "SD",
+      "stateCode": "SD",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because South Dakota does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "tennessee",
+      "displayName": "Tennessee",
+      "shortName": "TN",
+      "stateCode": "TN",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because Tennessee does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    },
+    {
+      "id": "utah",
+      "displayName": "Utah",
+      "shortName": "UT",
+      "stateCode": "UT",
+      "taxLabel": "UT resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Utah resident income tax estimate.",
+      "stateTaxTitle": "UT state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "flat",
+        "taxableBase": "federalTaxableIncome",
+        "flatRate": 0.045
+      }
+    },
+    {
+      "id": "virginia",
+      "displayName": "Virginia",
+      "shortName": "VA",
+      "stateCode": "VA",
+      "taxLabel": "VA resident tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal, FICA, and a simple Virginia resident income tax estimate.",
+      "stateTaxTitle": "VA state income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "progressive",
+        "taxableBase": "taxableCompensation",
+        "standardDeductions": {
+          "single": 8750,
+          "marriedJoint": 17500,
+          "headOfHousehold": 8750
+        },
+        "brackets": {
+          "single": [
+            { "lowerBound": 0, "upperBound": 3000, "baseTax": 0, "marginalRate": 0.02 },
+            { "lowerBound": 3000, "upperBound": 5000, "baseTax": 60, "marginalRate": 0.03 },
+            { "lowerBound": 5000, "upperBound": 17000, "baseTax": 120, "marginalRate": 0.05 },
+            { "lowerBound": 17000, "upperBound": null, "baseTax": 720, "marginalRate": 0.0575 }
+          ],
+          "marriedJoint": [
+            { "lowerBound": 0, "upperBound": 3000, "baseTax": 0, "marginalRate": 0.02 },
+            { "lowerBound": 3000, "upperBound": 5000, "baseTax": 60, "marginalRate": 0.03 },
+            { "lowerBound": 5000, "upperBound": 17000, "baseTax": 120, "marginalRate": 0.05 },
+            { "lowerBound": 17000, "upperBound": null, "baseTax": 720, "marginalRate": 0.0575 }
+          ],
+          "headOfHousehold": [
+            { "lowerBound": 0, "upperBound": 3000, "baseTax": 0, "marginalRate": 0.02 },
+            { "lowerBound": 3000, "upperBound": 5000, "baseTax": 60, "marginalRate": 0.03 },
+            { "lowerBound": 5000, "upperBound": 17000, "baseTax": 120, "marginalRate": 0.05 },
+            { "lowerBound": 17000, "upperBound": null, "baseTax": 720, "marginalRate": 0.0575 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wyoming",
+      "displayName": "Wyoming",
+      "shortName": "WY",
+      "stateCode": "WY",
+      "taxLabel": "No state wage income tax",
+      "assumptionLabel": "Estimated take-home uses 2025 federal and FICA tax rules because Wyoming does not levy a broad personal wage income tax.",
+      "stateTaxTitle": "State income tax",
+      "localTaxTitle": null,
+      "stateRule": {
+        "strategy": "none",
+        "taxableBase": "taxableCompensation"
+      }
+    }
+  ]
+}

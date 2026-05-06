@@ -32,17 +32,13 @@ private struct SimpleModeStartView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("simple mode")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(ClockedTheme.subtleText)
-
                     Text("Start timer with saved information")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(ClockedTheme.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text("This will use your last confirmed pay, location, and schedule settings so you can jump in immediately.")
-                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(ClockedTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -53,6 +49,11 @@ private struct SimpleModeStartView: View {
                     summaryRow(title: "location", value: store.configuration.location.shortName)
                     summaryRow(title: "schedule", value: store.workScheduleLabel)
                     summaryRow(title: "take-home rate", value: "\(estimate.netPerSecond.currencyString)/s")
+
+                    Text("Using bundled \(ClockedTaxEngine.taxYear) estimate rules for your saved setup.")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(ClockedTheme.subtleText)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Button(action: store.startClock) {
                         Text("Start")
@@ -68,6 +69,8 @@ private struct SimpleModeStartView: View {
                     .buttonStyle(.plain)
                     .disabled(!store.canQuickStartClock)
                     .opacity(store.canQuickStartClock ? 1 : 0.45)
+                    .accessibilityLabel("Start timer")
+                    .accessibilityHint("Starts a workday timer with your saved information")
                 }
                 .padding(22)
                 .clockedCard()
@@ -98,6 +101,9 @@ private struct SimpleModeStartView: View {
                 .foregroundStyle(ClockedTheme.primaryText)
                 .multilineTextAlignment(.trailing)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 }
 
@@ -145,6 +151,7 @@ private struct SimpleLiveContent: View {
                         Circle()
                             .fill(snapshot.statusColor)
                             .frame(width: 9, height: 9)
+                            .accessibilityHidden(true)
 
                         Text(simpleStatusLine)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -154,6 +161,10 @@ private struct SimpleLiveContent: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 22)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Earned today")
+                .accessibilityValue(snapshot.netEarned.currencyString)
+                .accessibilityHint(simpleStatusLine)
 
                 VStack(alignment: .leading, spacing: 18) {
                     HStack {
@@ -169,6 +180,8 @@ private struct SimpleLiveContent: View {
                     }
 
                     simpleProgressBar
+                        .accessibilityLabel("Work day progress")
+                        .accessibilityValue("\(Int(snapshot.progress * 100)) percent complete")
 
                     HStack(spacing: 12) {
                         simpleMetric(title: "rate", value: snapshot.estimate.netPerSecond.currencyString)
@@ -200,6 +213,8 @@ private struct SimpleLiveContent: View {
                     .buttonStyle(.plain)
                     .disabled(snapshot.status == .scheduled || snapshot.status == .complete)
                     .opacity(snapshot.status == .scheduled || snapshot.status == .complete ? 0.45 : 1)
+                    .accessibilityLabel(snapshot.status == .paused ? "Resume timer" : "Pause timer")
+                    .accessibilityHint("Pauses or resumes the active workday timer")
 
                     Button {
                         store.stopClock()
@@ -215,6 +230,8 @@ private struct SimpleLiveContent: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Stop timer")
+                    .accessibilityHint("Stops the current workday and saves the session to history")
                 }
             }
             .padding(.horizontal, 20)
@@ -278,6 +295,9 @@ private struct SimpleLiveContent: View {
                 .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 }
 

@@ -34,10 +34,6 @@ private struct AdvancedLiveContent: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 22) {
                 VStack(spacing: 10) {
-                    Text("advanced mode")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(ClockedTheme.subtleText)
-
                     Text("earned today")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(ClockedTheme.secondaryText)
@@ -60,6 +56,7 @@ private struct AdvancedLiveContent: View {
                         Circle()
                             .fill(snapshot.statusColor)
                             .frame(width: 9, height: 9)
+                            .accessibilityHidden(true)
 
                         Text(statusLine)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -69,6 +66,10 @@ private struct AdvancedLiveContent: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 18)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Earned today")
+                .accessibilityValue(snapshot.netEarned.currencyString)
+                .accessibilityHint(statusLine)
 
                 primaryStatusCard
                 savedDetailsCard
@@ -105,6 +106,8 @@ private struct AdvancedLiveContent: View {
                 }
             }
             .frame(height: 8)
+            .accessibilityLabel("Work day progress")
+            .accessibilityValue("\(Int(snapshot.progress * 100)) percent complete")
 
             HStack(spacing: 12) {
                 metric(title: "rate", value: snapshot.estimate.netPerSecond.currencyString)
@@ -148,6 +151,19 @@ private struct AdvancedLiveContent: View {
             ForEach(taxBreakdown.prefix(3)) { row in
                 summaryRow(title: row.title.lowercased(), value: row.formattedAmount)
             }
+
+            Divider()
+                .background(ClockedTheme.stroke)
+
+            Text(store.taxCatalogSummary)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(ClockedTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(store.payrollAssumptionsLabel)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(ClockedTheme.subtleText)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(22)
         .clockedCard()
@@ -175,6 +191,8 @@ private struct AdvancedLiveContent: View {
             .buttonStyle(.plain)
             .disabled(snapshot.status == .scheduled || snapshot.status == .complete)
             .opacity(snapshot.status == .scheduled || snapshot.status == .complete ? 0.45 : 1)
+            .accessibilityLabel(snapshot.status == .paused ? "Resume timer" : "Pause timer")
+            .accessibilityHint("Pauses or resumes the active workday timer")
 
             Button {
                 store.stopClock()
@@ -190,6 +208,8 @@ private struct AdvancedLiveContent: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Stop timer")
+            .accessibilityHint("Stops the current workday and saves it to history")
         }
     }
 
@@ -231,6 +251,9 @@ private struct AdvancedLiveContent: View {
                 .minimumScaleFactor(0.72)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 
     private func summaryRow(title: String, value: String) -> some View {
@@ -246,6 +269,9 @@ private struct AdvancedLiveContent: View {
                 .foregroundStyle(ClockedTheme.primaryText)
                 .multilineTextAlignment(.trailing)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 }
 

@@ -13,6 +13,70 @@ enum ClockedConstants {
     static let maxIncomeStreams = 3
 }
 
+enum ClockedAppearancePreference: String, CaseIterable, Codable, Identifiable {
+    case system
+    case dark
+    case light
+
+    static let allCases: [ClockedAppearancePreference] = [.dark, .light, .system]
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system:
+            return "System"
+        case .dark:
+            return "Dark"
+        case .light:
+            return "Light"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .dark:
+            return .dark
+        case .light:
+            return .light
+        }
+    }
+}
+
+struct ClockedLocalSettings: Codable, Equatable {
+    var appearancePreference: ClockedAppearancePreference
+    var profileName: String
+
+    init(
+        appearancePreference: ClockedAppearancePreference = .system,
+        profileName: String = ""
+    ) {
+        self.appearancePreference = appearancePreference
+        self.profileName = profileName
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case appearancePreference
+        case profileName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        appearancePreference = try container.decodeIfPresent(ClockedAppearancePreference.self, forKey: .appearancePreference) ?? .system
+        profileName = try container.decodeIfPresent(String.self, forKey: .profileName) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(appearancePreference, forKey: .appearancePreference)
+        try container.encode(profileName, forKey: .profileName)
+    }
+
+    static let `default` = ClockedLocalSettings()
+}
+
 enum PayFrequency: String, CaseIterable, Codable, Identifiable {
     case annual
     case monthly
@@ -73,118 +137,116 @@ enum FilingStatus: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum LocationOption: String, CaseIterable, Codable, Identifiable {
-    case newYorkCity = "newYork"
-    case california = "losAngeles"
-    case illinois = "chicago"
-    case texas = "austin"
-    case florida = "miami"
-    case washington = "seattle"
-    case massachusetts
-    case colorado
-    case pennsylvania
+struct LocationOption: RawRepresentable, CaseIterable, Codable, Identifiable, Equatable, Hashable {
+    let rawValue: String
+
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    static let newYorkCity = LocationOption(rawValue: "newYork")
+    static let california = LocationOption(rawValue: "losAngeles")
+    static let illinois = LocationOption(rawValue: "chicago")
+    static let texas = LocationOption(rawValue: "austin")
+    static let florida = LocationOption(rawValue: "miami")
+    static let washington = LocationOption(rawValue: "seattle")
+    static let massachusetts = LocationOption(rawValue: "massachusetts")
+    static let colorado = LocationOption(rawValue: "colorado")
+    static let pennsylvania = LocationOption(rawValue: "pennsylvania")
+
+    static let bootstrapCases: [LocationOption] = [
+        .newYorkCity,
+        .california,
+        .illinois,
+        .texas,
+        .florida,
+        .washington,
+        .massachusetts,
+        .colorado,
+        .pennsylvania,
+        LocationOption(rawValue: "alaska"),
+        LocationOption(rawValue: "arizona"),
+        LocationOption(rawValue: "georgia"),
+        LocationOption(rawValue: "idaho"),
+        LocationOption(rawValue: "indiana"),
+        LocationOption(rawValue: "iowa"),
+        LocationOption(rawValue: "kentucky"),
+        LocationOption(rawValue: "louisiana"),
+        LocationOption(rawValue: "michigan"),
+        LocationOption(rawValue: "mississippi"),
+        LocationOption(rawValue: "nevada"),
+        LocationOption(rawValue: "newHampshire"),
+        LocationOption(rawValue: "northCarolina"),
+        LocationOption(rawValue: "ohio"),
+        LocationOption(rawValue: "southDakota"),
+        LocationOption(rawValue: "tennessee"),
+        LocationOption(rawValue: "utah"),
+        LocationOption(rawValue: "virginia"),
+        LocationOption(rawValue: "wyoming")
+    ]
+
+    static var allCases: [LocationOption] {
+        ClockedTaxCatalog.shared.availableLocations
+    }
 
     var id: String { rawValue }
 
     var name: String {
-        switch self {
-        case .newYorkCity:
-            return "New York City, NY"
-        case .california:
-            return "California"
-        case .illinois:
-            return "Illinois"
-        case .texas:
-            return "Texas"
-        case .florida:
-            return "Florida"
-        case .washington:
-            return "Washington"
-        case .massachusetts:
-            return "Massachusetts"
-        case .colorado:
-            return "Colorado"
-        case .pennsylvania:
-            return "Pennsylvania"
-        }
+        profile?.displayName ?? fallbackDisplayName
     }
 
     var shortName: String {
-        switch self {
-        case .newYorkCity:
-            return "NYC"
-        case .california:
-            return "CA"
-        case .illinois:
-            return "IL"
-        case .texas:
-            return "TX"
-        case .florida:
-            return "FL"
-        case .washington:
-            return "WA"
-        case .massachusetts:
-            return "MA"
-        case .colorado:
-            return "CO"
-        case .pennsylvania:
-            return "PA"
-        }
+        profile?.shortName ?? fallbackShortName
     }
 
     var stateCode: String {
-        switch self {
-        case .newYorkCity:
-            return "NY"
-        case .california:
-            return "CA"
-        case .illinois:
-            return "IL"
-        case .texas:
-            return "TX"
-        case .florida:
-            return "FL"
-        case .washington:
-            return "WA"
-        case .massachusetts:
-            return "MA"
-        case .colorado:
-            return "CO"
-        case .pennsylvania:
-            return "PA"
-        }
+        profile?.stateCode ?? "--"
     }
 
     var taxLabel: String {
-        switch self {
-        case .newYorkCity:
-            return "NY state + NYC resident tax"
-        case .california:
-            return "CA resident tax"
-        case .illinois:
-            return "IL resident tax"
-        case .texas:
-            return "TX resident tax"
-        case .florida:
-            return "FL resident tax"
-        case .washington:
-            return "WA resident tax"
-        case .massachusetts:
-            return "MA resident tax"
-        case .colorado:
-            return "CO resident tax"
-        case .pennsylvania:
-            return "PA resident tax"
-        }
+        profile?.taxLabel ?? "Resident tax estimate"
     }
 
     var localTaxTitle: String? {
-        switch self {
-        case .newYorkCity:
-            return "NYC resident tax"
-        case .california, .illinois, .texas, .florida, .washington, .massachusetts, .colorado, .pennsylvania:
-            return nil
-        }
+        profile?.localTaxTitle
+    }
+
+    private var profile: LocationTaxProfile? {
+        ClockedTaxCatalog.shared.profileIfAvailable(for: self)
+    }
+
+    var fallbackDisplayName: String {
+        rawValue
+            .replacingOccurrences(
+                of: "([a-z])([A-Z])",
+                with: "$1 $2",
+                options: .regularExpression
+            )
+            .capitalized
+    }
+
+    var fallbackShortName: String {
+        let words = fallbackDisplayName
+            .split(separator: " ")
+            .map(String.init)
+
+        let initials = words
+            .prefix(3)
+            .compactMap(\.first)
+            .map { String($0).uppercased() }
+            .joined()
+
+        return initials.isEmpty ? rawValue.prefix(3).uppercased() : initials
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        rawValue = try container.decode(String.self)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
@@ -431,9 +493,30 @@ struct IncomeStream: Codable, Equatable, Identifiable {
     }
 }
 
-struct ClockedWorkspace: Codable {
+struct ClockedWorkspace: Codable, Equatable {
     var streams: [IncomeStream]
     var selectedStreamID: UUID
+
+    static let `default`: ClockedWorkspace = {
+        let primaryStream = IncomeStream.primary(configuration: .default)
+        return ClockedWorkspace(
+            streams: [primaryStream],
+            selectedStreamID: primaryStream.id
+        )
+    }()
+
+    func normalized() -> ClockedWorkspace {
+        guard !streams.isEmpty else { return .default }
+
+        let normalizedSelectedStreamID = streams.contains(where: { $0.id == selectedStreamID })
+            ? selectedStreamID
+            : streams[0].id
+
+        return ClockedWorkspace(
+            streams: streams,
+            selectedStreamID: normalizedSelectedStreamID
+        )
+    }
 }
 
 struct WorkSession: Codable, Equatable, Identifiable {
@@ -468,6 +551,22 @@ struct WorkSession: Codable, Equatable, Identifiable {
 
     var isPaused: Bool {
         pausedAt != nil
+    }
+
+    func normalized(calendar: Calendar) -> WorkSession {
+        let normalizedWorkDate = calendar.startOfDay(for: createdAt)
+        guard normalizedWorkDate != workDate else { return self }
+
+        return WorkSession(
+            id: id,
+            streamID: streamID,
+            streamName: streamName,
+            configuration: configuration,
+            workDate: normalizedWorkDate,
+            createdAt: createdAt,
+            pausedAt: pausedAt,
+            accumulatedPausedSeconds: accumulatedPausedSeconds
+        )
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -557,7 +656,7 @@ struct EarningsEstimate: Equatable {
     }
 }
 
-enum SessionStatus {
+enum SessionStatus: Equatable {
     case scheduled
     case live
     case paused
@@ -688,6 +787,21 @@ struct AchievementStatus: Identifiable, Equatable {
     let isUnlocked: Bool
     let progress: Double
     let progressText: String
+
+    var badgeSymbolName: String {
+        switch id {
+        case "first-100-day":
+            return "sun.max.fill"
+        case "first-1000-week":
+            return "banknote.fill"
+        case "five-day-streak":
+            return "flame.fill"
+        case "thirty-day-streak":
+            return "rosette"
+        default:
+            return "seal.fill"
+        }
+    }
 }
 
 struct SpendingComparison: Identifiable, Equatable {

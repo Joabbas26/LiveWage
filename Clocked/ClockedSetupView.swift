@@ -47,17 +47,13 @@ struct ClockedSetupView: View {
 
     private var introCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("advanced mode")
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(ClockedTheme.subtleText)
-
             Text("Update saved information before you start")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .font(.system(size: 21, weight: .bold, design: .rounded))
                 .foregroundStyle(ClockedTheme.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text("Advanced keeps the longer input flow so you can refine compensation, location, schedule, and goal details before starting the timer.")
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(ClockedTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -96,6 +92,8 @@ struct ClockedSetupView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!store.canAddIncomeStream)
+                    .accessibilityLabel("Add income stream")
+                    .accessibilityHint("Creates another saved income stream in this editor")
                 }
             }
 
@@ -202,6 +200,9 @@ struct ClockedSetupView: View {
                 settingsRow(label: "Residence tax location", value: store.configuration.location.name)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Residence tax location")
+            .accessibilityValue(store.configuration.location.name)
+            .accessibilityHint("Opens the saved tax location list")
 
             Menu {
                 ForEach(FilingStatus.allCases) { status in
@@ -213,6 +214,9 @@ struct ClockedSetupView: View {
                 settingsRow(label: "Filing status", value: store.configuration.filingStatus.title)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Filing status")
+            .accessibilityValue(store.configuration.filingStatus.title)
+            .accessibilityHint("Opens the filing status list")
 
             HStack(spacing: 14) {
                 stepperCard(
@@ -231,14 +235,13 @@ struct ClockedSetupView: View {
             }
 
             DatePicker(
-                "",
+                "Typical start time",
                 selection: Binding(
                     get: { store.configuration.startTimeDate(calendar: Calendar(identifier: .gregorian)) },
                     set: { store.setWorkStartTime($0) }
                 ),
                 displayedComponents: .hourAndMinute
             )
-            .labelsHidden()
             .datePickerStyle(.compact)
             .tint(ClockedTheme.primaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -252,7 +255,7 @@ struct ClockedSetupView: View {
                     .stroke(ClockedTheme.stroke, lineWidth: 1)
             )
             .overlay(alignment: .topLeading) {
-                Text("Work day starts")
+                Text("Typical start time")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(ClockedTheme.subtleText)
                     .padding(.horizontal, 18)
@@ -307,8 +310,24 @@ struct ClockedSetupView: View {
             summaryRow(title: "Work week", value: store.configuration.workWeekSummary)
             summaryRow(title: "Goal", value: store.configuration.savingsGoalAmount > 0 ? store.configuration.savingsGoalAmount.currencyString : "Not set")
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Estimate assumptions")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ClockedTheme.subtleText)
+
+                Text(store.taxCatalogSummary)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(ClockedTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(store.payrollAssumptionsLabel)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(ClockedTheme.subtleText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Button(action: store.startClock) {
-                Text("Start in advanced mode")
+                Text("Start timer")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(ClockedTheme.lightButtonText)
                     .frame(maxWidth: .infinity)
@@ -321,6 +340,8 @@ struct ClockedSetupView: View {
             .buttonStyle(.plain)
             .disabled(!store.canStartClock)
             .opacity(store.canStartClock ? 1 : 0.45)
+            .accessibilityLabel("Start timer")
+            .accessibilityHint("Starts a workday timer with the saved advanced settings")
         }
         .padding(22)
         .clockedCard()
@@ -369,6 +390,8 @@ struct ClockedSetupView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func settingsRow(label: String, value: String) -> some View {
@@ -400,6 +423,9 @@ struct ClockedSetupView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(ClockedTheme.stroke, lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
     }
 
     private func plainInputRow(
@@ -432,6 +458,7 @@ struct ClockedSetupView: View {
                                 lineWidth: focusedField == focusField ? 1.5 : 1
                             )
                     )
+                    .accessibilityLabel(title)
 
                 Button(action: action) {
                     Text("OK")
@@ -445,6 +472,8 @@ struct ClockedSetupView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!canCommit)
+                .accessibilityLabel("Confirm \(title.lowercased())")
+                .accessibilityHint("Saves this value into the form")
             }
         }
     }
@@ -485,6 +514,7 @@ struct ClockedSetupView: View {
                         .focused($focusedField, equals: focusField)
                         .padding(.leading, 42)
                         .padding(.trailing, 20)
+                        .accessibilityLabel(title)
                 }
                 .frame(height: 62)
 
@@ -500,6 +530,8 @@ struct ClockedSetupView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!canCommit)
+                .accessibilityLabel("Confirm \(title.lowercased())")
+                .accessibilityHint("Saves this value into the form")
             }
         }
     }
@@ -523,7 +555,11 @@ struct ClockedSetupView: View {
             }
 
             HStack {
-                StepperButton(symbol: "minus", action: onMinus)
+                StepperButton(
+                    symbol: "minus",
+                    accessibilityLabel: "Decrease \(title.lowercased())",
+                    action: onMinus
+                )
 
                 Spacer()
 
@@ -534,7 +570,11 @@ struct ClockedSetupView: View {
 
                 Spacer()
 
-                StepperButton(symbol: "plus", action: onPlus)
+                StepperButton(
+                    symbol: "plus",
+                    accessibilityLabel: "Increase \(title.lowercased())",
+                    action: onPlus
+                )
             }
         }
         .padding(18)
@@ -547,6 +587,10 @@ struct ClockedSetupView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(ClockedTheme.stroke, lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(valueText)
+        .accessibilityHint(subtitle ?? "Adjust with the plus and minus buttons")
     }
 
     private func summaryRow(title: String, value: String) -> some View {
@@ -562,11 +606,15 @@ struct ClockedSetupView: View {
                 .foregroundStyle(ClockedTheme.primaryText)
                 .multilineTextAlignment(.trailing)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
     }
 }
 
 private struct StepperButton: View {
     let symbol: String
+    let accessibilityLabel: String
     let action: () -> Void
 
     var body: some View {
@@ -581,6 +629,7 @@ private struct StepperButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

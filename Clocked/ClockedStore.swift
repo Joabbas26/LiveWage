@@ -7,14 +7,7 @@
 
 import Foundation
 import Observation
-
-private struct DayAggregate {
-    let date: Date
-    var netEarned: Double
-    var grossEarned: Double
-    var elapsedSeconds: Double
-    var configuration: EarningsConfiguration
-}
+import SwiftUI
 
 @MainActor
 @Observable
@@ -22,6 +15,8 @@ final class ClockedStore {
     var streams: [IncomeStream]
     var selectedStreamID: UUID
     var configuration: EarningsConfiguration
+    var localSettings: ClockedLocalSettings
+    var profileNameInput: String
     var salaryInput: String
     var bonusInput: String
     var benefitsInput: String
@@ -31,20 +26,30 @@ final class ClockedStore {
     private(set) var history: [WorkdayRecord]
 
     private let calendar: Calendar
-    private let defaults: UserDefaults
-    private let workspaceKey = "clocked.workspace.v1"
-    private let historyKey = "clocked.history.v1"
-    private let legacyConfigurationKey = "clocked.configuration.v2"
-    private let sessionKey = "clocked.session.v2"
+    private let persistence: ClockedPersistenceStore
+    private let sessionCalculator = ClockedSessionCalculator()
+    private let insightsService: ClockedInsightsService
+    private let telemetry = ClockedTelemetry.shared
 
-    init(
-        defaults: UserDefaults = .standard,
+    convenience init(
         calendar: Calendar = Calendar(identifier: .gregorian)
     ) {
-        self.defaults = defaults
-        self.calendar = calendar
+        self.init(
+            persistence: ClockedPersistenceStore(),
+            calendar: calendar
+        )
+    }
 
-        let workspace = Self.loadWorkspace(from: defaults)
+    init(
+        persistence: ClockedPersistenceStore,
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) {
+        self.persistence = persistence
+        self.calendar = calendar
+        self.insightsService = ClockedInsightsService(calendar: calendar)
+
+        let state = persistence.loadState()
+        let workspace = state.workspace
         let initialStreams = workspace.streams
         let initialSelectedStreamID = initialStreams.contains(where: { $0.id == workspace.selectedStreamID })
             ? workspace.selectedStreamID
@@ -54,29 +59,16 @@ final class ClockedStore {
         streams = initialStreams
         selectedStreamID = initialSelectedStreamID
         configuration = initialSelectedStream.configuration
+        localSettings = state.settings
+        profileNameInput = state.settings.profileName
         salaryInput = initialSelectedStream.configuration.salaryAmount.groupedCurrencyInput
         bonusInput = initialSelectedStream.configuration.annualBonusAmount.groupedCurrencyInput
         benefitsInput = initialSelectedStream.configuration.monthlyPretaxBenefitsAmount.groupedCurrencyInput
         goalInput = initialSelectedStream.configuration.savingsGoalAmount.groupedCurrencyInput
         streamNameInput = initialSelectedStream.name
 
-        if
-            let data = defaults.data(forKey: historyKey),
-            let decoded = try? Self.decoder.decode([WorkdayRecord].self, from: data)
-        {
-            history = decoded.sorted { $0.completedAt > $1.completedAt }
-        } else {
-            history = []
-        }
-
-        if
-            let data = defaults.data(forKey: sessionKey),
-            let decoded = try? Self.decoder.decode(WorkSession.self, from: data)
-        {
-            activeSession = decoded
-        } else {
-            activeSession = nil
-        }
+        history = state.history.sorted { $0.completedAt > $1.completedAt }
+        activeSession = state.activeSession?.normalized(calendar: calendar)
 
         ensureSessionStreamExists()
         ensureSelectionIsValid()
@@ -84,6 +76,11 @@ final class ClockedStore {
         refreshSessionStateIfNeeded()
         persistWorkspace()
         persistHistory()
+        telemetry.stateRestored(
+            streamCount: streams.count,
+            historyCount: history.count,
+            hasActiveSession: activeSession != nil
+        )
     }
 
     var estimate: EarningsEstimate {
@@ -92,6 +89,51 @@ final class ClockedStore {
 
     var selectedStreamName: String {
         selectedStream?.name ?? "Income"
+    }
+
+    var profileName: String {
+        localSettings.profileName
+    }
+
+    var profileNameDisplay: String {
+        profileName.isEmpty ? "Not set" : profileName
+    }
+
+    var userInitials: String {
+        let trimmedName = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else { return "NA" }
+
+        let words = trimmedName.split(whereSeparator: \.isWhitespace)
+        if words.count >= 2 {
+            return String(words.prefix(2).compactMap(\.first)).uppercased()
+        }
+
+        return String(trimmedName.prefix(2)).uppercased()
+    }
+
+    var preferredColorScheme: ColorScheme? {
+        localSettings.appearancePreference.colorScheme
+    }
+
+    var appearancePreference: ClockedAppearancePreference {
+        localSettings.appearancePreference
+    }
+
+    var isDarkModeEnabled: Bool {
+        localSettings.appearancePreference == .dark
+    }
+
+    var canClearStats: Bool {
+        !history.isEmpty
+    }
+
+    var historyCount: Int {
+        history.count
+    }
+
+    var canCommitProfileName: Bool {
+        profileNameNeedsConfirmation
     }
 
     var canCommitSalary: Bool {
@@ -128,6 +170,10 @@ final class ClockedStore {
 
     var goalNeedsConfirmation: Bool {
         abs(parsedGoalInput - configuration.savingsGoalAmount) > 0.009
+    }
+
+    var profileNameNeedsConfirmation: Bool {
+        trimmedProfileNameInput != profileName
     }
 
     var streamNameNeedsConfirmation: Bool {
@@ -185,22 +231,39 @@ final class ClockedStore {
     }
 
     var assumptionsLabel: String {
-        switch configuration.location {
-        case .newYorkCity:
-            return "Estimated take-home uses 2025 federal, FICA, New York State, and NYC resident tax rules."
-        case .california:
-            return "Estimated take-home uses 2025 federal, FICA, and California resident tax rules."
-        case .illinois:
-            return "Estimated take-home uses 2025 federal, FICA, and Illinois resident tax rules."
-        case .massachusetts:
-            return "Estimated take-home uses 2025 federal, FICA, and Massachusetts resident tax rules."
-        case .colorado:
-            return "Estimated take-home uses 2025 federal and FICA rules, with Colorado income tax modeled from federal taxable income."
-        case .pennsylvania:
-            return "Estimated take-home uses 2025 federal, FICA, and Pennsylvania resident tax rules."
-        case .texas, .florida, .washington:
-            return "Estimated take-home uses 2025 federal and FICA tax rules because the selected state does not levy personal wage income tax."
+        ClockedTaxEngine.assumptionsLabel(for: configuration)
+    }
+
+    var activeEstimateNotice: ClockedEstimateNotice? {
+        if let issue = ClockedTaxEngine.loadingIssue {
+            return ClockedEstimateNotice(
+                title: "Reduced estimate mode",
+                message: "Bundled \(ClockedTaxEngine.taxYear) tax data could not be loaded. Clocked is temporarily using federal income tax and FICA only until that catalog is restored. \(issue.description)",
+                tone: .warning
+            )
         }
+
+        if !ClockedTaxEngine.hasBundledProfile(for: configuration.location) {
+            return ClockedEstimateNotice(
+                title: "Location fallback",
+                message: "\(configuration.location.name) is not in the bundled \(ClockedTaxEngine.taxYear) tax catalog yet, so the estimate falls back to federal income tax and FICA only for that location.",
+                tone: .warning
+            )
+        }
+
+        return nil
+    }
+
+    var taxCatalogSummary: String {
+        if let activeEstimateNotice {
+            return activeEstimateNotice.message
+        }
+
+        if ClockedTaxEngine.hasLocalIncomeTax(for: configuration.location) {
+            return "Using bundled \(ClockedTaxEngine.taxYear) federal, FICA, state, and supported local tax rules for \(configuration.location.name)."
+        }
+
+        return "Using bundled \(ClockedTaxEngine.taxYear) federal, FICA, and state tax rules for \(configuration.location.name). Unsupported city and county taxes are still excluded."
     }
 
     var payrollAssumptionsLabel: String {
@@ -209,8 +272,8 @@ final class ClockedStore {
             "Savings goal progress is based on the recorded take-home you have tracked in this stream."
         ]
 
-        if configuration.location != .newYorkCity {
-            notes.append("Only New York City local resident tax is included right now; other city and county payroll taxes are not yet modeled.")
+        if !ClockedTaxEngine.hasLocalIncomeTax(for: configuration.location) {
+            notes.append("Only the bundled local resident tax overlays are included right now; other city and county payroll taxes are not yet modeled.")
         }
 
         if configuration.location == .pennsylvania {
@@ -220,8 +283,20 @@ final class ClockedStore {
         return notes.joined(separator: " ")
     }
 
+    var privacySummary: String {
+        "Clocked saves your name, pay setup, location, schedule, savings goal, appearance preference, and stats history only on this device in local app storage. No login, account sync, or background upload is enabled."
+    }
+
+    var diagnosticsSummary: String {
+        "Clocked writes local OSLog diagnostics for session lifecycle events, legacy-data migration, and tax-data fallback issues. Remote analytics and crash reporting are not connected yet."
+    }
+
+    var localStorageSummary: String {
+        "Your saved setup stays local: \(profileNameDisplay), \(selectedStreamName), \(configuration.location.name), \(configuration.workWeekSummary), and \(historyCount) tracked stat \(historyCount == 1 ? "entry" : "entries")."
+    }
+
     var workScheduleLabel: String {
-        "\(configuration.workWeekSummary) · starts \(startTimeText)"
+        "\(configuration.workWeekSummary) · usual start \(startTimeText)"
     }
 
     var startTimeText: String {
@@ -249,6 +324,10 @@ final class ClockedStore {
         achievementsStatus(at: .now)
     }
 
+    var unlockedBadges: [AchievementStatus] {
+        achievements.filter(\.isUnlocked)
+    }
+
     var spendingComparisons: [SpendingComparison] {
         spendingComparisonsStatus(at: .now)
     }
@@ -259,6 +338,10 @@ final class ClockedStore {
 
     func updateStreamNameInput(_ value: String) {
         streamNameInput = String(value.prefix(26))
+    }
+
+    func updateProfileNameInput(_ value: String) {
+        profileNameInput = String(value.prefix(40))
     }
 
     func updateSalaryInput(_ value: String) {
@@ -281,6 +364,13 @@ final class ClockedStore {
         guard canCommitStreamName else { return }
         updateSelectedStreamName(trimmedStreamNameInput)
         streamNameInput = trimmedStreamNameInput
+    }
+
+    func commitProfileNameInput() {
+        guard canCommitProfileName else { return }
+        localSettings.profileName = trimmedProfileNameInput
+        profileNameInput = localSettings.profileName
+        persistState()
     }
 
     func commitSalaryInput() {
@@ -355,6 +445,16 @@ final class ClockedStore {
         persistSelectedStreamConfiguration()
     }
 
+    func setAppearancePreference(_ preference: ClockedAppearancePreference) {
+        guard localSettings.appearancePreference != preference else { return }
+        localSettings.appearancePreference = preference
+        persistState()
+    }
+
+    func setDarkModeEnabled(_ isEnabled: Bool) {
+        setAppearancePreference(isEnabled ? .dark : .light)
+    }
+
     func adjustWorkHours(by delta: Int) {
         configuration.workHoursPerDay = min(max(configuration.workHoursPerDay + delta, 1), 16)
         persistSelectedStreamConfiguration()
@@ -382,13 +482,15 @@ final class ClockedStore {
         guard let selectedStream else { return }
 
         let now = Date.now
-        let workDate = configuration.nextWorkDate(from: now, calendar: calendar)
-        activeSession = WorkSession(
-            streamID: selectedStream.id,
-            streamName: selectedStream.name,
+        activeSession = sessionCalculator.makeSession(
+            selectedStream: selectedStream,
             configuration: configuration,
-            workDate: workDate,
-            createdAt: now
+            currentDate: now,
+            calendar: calendar
+        )
+        telemetry.sessionStarted(
+            streamID: selectedStream.id,
+            scheduledWorkday: configuration.workDaysPerWeek
         )
         persistWorkspace()
         persistSession()
@@ -401,8 +503,10 @@ final class ClockedStore {
         if let pausedAt = activeSession.pausedAt {
             activeSession.accumulatedPausedSeconds += date.timeIntervalSince(pausedAt)
             activeSession.pausedAt = nil
+            telemetry.sessionResumed(streamID: activeSession.streamID)
         } else {
             activeSession.pausedAt = date
+            telemetry.sessionPaused(streamID: activeSession.streamID)
         }
 
         self.activeSession = activeSession
@@ -410,9 +514,13 @@ final class ClockedStore {
     }
 
     func stopClock(at date: Date = .now) {
+        let streamID = activeSession?.streamID
         finalizeActiveSession(at: date)
         activeSession = nil
         persistSession()
+        if let streamID {
+            telemetry.sessionStopped(streamID: streamID, reason: "manual_stop")
+        }
     }
 
     func refreshSessionStateIfNeeded(at date: Date = .now) {
@@ -420,49 +528,30 @@ final class ClockedStore {
         ensureSessionStreamExists()
 
         if let snapshot = sessionSnapshot(at: date), snapshot.status == .complete {
+            let streamID = activeSession?.streamID
             finalizeActiveSession(at: date)
             activeSession = nil
             persistSession()
+            if let streamID {
+                telemetry.sessionStopped(streamID: streamID, reason: "workday_complete")
+            }
         } else {
             persistSession()
         }
     }
 
+    func clearStats() {
+        guard canClearStats else { return }
+        history = []
+        persistHistory()
+    }
+
     func sessionSnapshot(at date: Date) -> SessionSnapshot? {
         guard let activeSession else { return nil }
-
-        let estimate = ClockedTaxEngine.estimate(for: activeSession.configuration)
-        let start = activeSession.configuration.scheduledStart(on: activeSession.workDate, calendar: calendar)
-        let end = activeSession.configuration.scheduledEnd(on: activeSession.workDate, calendar: calendar)
-
-        let effectiveNow = activeSession.pausedAt ?? date
-        let rawElapsed = max(min(effectiveNow.timeIntervalSince(start), activeSession.configuration.workDaySeconds), 0)
-        let elapsedWorkSeconds = max(rawElapsed - activeSession.accumulatedPausedSeconds, 0)
-        let cappedElapsed = min(elapsedWorkSeconds, activeSession.configuration.workDaySeconds)
-        let remainingSeconds = max(activeSession.configuration.workDaySeconds - cappedElapsed, 0)
-
-        let status: SessionStatus
-        if date < start {
-            status = .scheduled
-        } else if cappedElapsed >= activeSession.configuration.workDaySeconds || date >= end {
-            status = .complete
-        } else if activeSession.isPaused {
-            status = .paused
-        } else {
-            status = .live
-        }
-
-        return SessionSnapshot(
-            session: activeSession,
-            estimate: estimate,
-            status: status,
-            now: date,
-            scheduledStart: start,
-            scheduledEnd: end,
-            elapsedWorkSeconds: cappedElapsed,
-            remainingSeconds: remainingSeconds,
-            grossEarned: cappedElapsed * estimate.grossPerSecond,
-            netEarned: cappedElapsed * estimate.netPerSecond
+        return sessionCalculator.snapshot(
+            for: activeSession,
+            at: date,
+            calendar: calendar
         )
     }
 
@@ -472,22 +561,22 @@ final class ClockedStore {
             TaxBreakdownRow(id: "fica", title: "Social Security + Medicare", amount: estimate.socialSecurityTax + estimate.medicareTax)
         ]
 
-        switch configuration.location {
-        case .newYorkCity:
-            rows.append(TaxBreakdownRow(id: "ny-state", title: "NY state income tax", amount: estimate.stateIncomeTax))
-            rows.append(TaxBreakdownRow(id: "nyc", title: "NYC resident tax", amount: estimate.localIncomeTax))
-        case .california:
-            rows.append(TaxBreakdownRow(id: "ca-state", title: "CA state income tax", amount: estimate.stateIncomeTax))
-        case .illinois:
-            rows.append(TaxBreakdownRow(id: "il-state", title: "IL state income tax", amount: estimate.stateIncomeTax))
-        case .massachusetts:
-            rows.append(TaxBreakdownRow(id: "ma-state", title: "MA state income tax", amount: estimate.stateIncomeTax))
-        case .colorado:
-            rows.append(TaxBreakdownRow(id: "co-state", title: "CO state income tax", amount: estimate.stateIncomeTax))
-        case .pennsylvania:
-            rows.append(TaxBreakdownRow(id: "pa-state", title: "PA state income tax", amount: estimate.stateIncomeTax))
-        case .texas, .florida, .washington:
-            rows.append(TaxBreakdownRow(id: "state", title: "State income tax", amount: 0))
+        rows.append(
+            TaxBreakdownRow(
+                id: "state",
+                title: ClockedTaxEngine.stateTaxTitle(for: configuration.location),
+                amount: estimate.stateIncomeTax
+            )
+        )
+
+        if let localTaxTitle = ClockedTaxEngine.localTaxTitle(for: configuration.location) {
+            rows.append(
+                TaxBreakdownRow(
+                    id: "local",
+                    title: localTaxTitle,
+                    amount: estimate.localIncomeTax
+                )
+            )
         }
 
         return rows
@@ -522,101 +611,34 @@ final class ClockedStore {
     }
 
     func weeklySummarySnapshot(at date: Date) -> WeeklySummary {
-        let interval = calendar.dateInterval(of: .weekOfYear, for: date)
-            ?? DateInterval(start: calendar.startOfDay(for: date), duration: 6 * 24 * 3600)
-        let aggregates = selectedDayAggregates(at: date)
-        let values = aggregates.values.filter { interval.contains($0.date) }
-
-        let netTotal = values.reduce(0) { $0 + $1.netEarned }
-        let grossTotal = values.reduce(0) { $0 + $1.grossEarned }
-        let totalHours = values.reduce(0) { $0 + ($1.elapsedSeconds / 3600) }
-
-        return WeeklySummary(
-            streamName: selectedStreamName,
-            weekStart: interval.start,
-            weekEnd: interval.end.addingTimeInterval(-1),
-            netTotal: netTotal,
-            grossTotal: grossTotal,
-            daysWorked: values.count,
-            totalHours: totalHours
+        insightsService.weeklySummary(
+            at: date,
+            aggregates: selectedDayAggregates(at: date),
+            selectedStreamName: selectedStreamName
         )
     }
 
     func goalProgressStatus(at date: Date) -> SavingsGoalProgress? {
-        let target = configuration.savingsGoalAmount
-        guard target > 0 else { return nil }
-
-        let currentAmount = selectedDayAggregates(at: date)
-            .values
-            .reduce(0) { $0 + $1.netEarned }
-
-        return SavingsGoalProgress(
-            targetAmount: target,
-            currentAmount: currentAmount
+        insightsService.goalProgress(
+            targetAmount: configuration.savingsGoalAmount,
+            aggregates: selectedDayAggregates(at: date)
         )
     }
 
     func achievementsStatus(at date: Date) -> [AchievementStatus] {
-        let aggregates = Array(selectedDayAggregates(at: date).values)
-        let bestDay = aggregates.map(\.netEarned).max() ?? 0
-        let bestWeek = bestWeeklyNet(at: date)
-        let bestStreak = bestStreakValue(at: date)
-
-        return [
-            AchievementStatus(
-                id: "first-100-day",
-                title: "First $100 day",
-                detail: "Hit \(100.0.currencyString) take-home in a single tracked day.",
-                isUnlocked: bestDay >= 100,
-                progress: min(bestDay / 100, 1),
-                progressText: bestDay >= 100 ? "Unlocked" : "Best day \(bestDay.currencyString)"
-            ),
-            AchievementStatus(
-                id: "first-1000-week",
-                title: "$1,000 week",
-                detail: "Bring home \(1_000.0.currencyString) across one tracked calendar week.",
-                isUnlocked: bestWeek >= 1_000,
-                progress: min(bestWeek / 1_000, 1),
-                progressText: bestWeek >= 1_000 ? "Unlocked" : "Best week \(bestWeek.currencyString)"
-            ),
-            AchievementStatus(
-                id: "five-day-streak",
-                title: "5-day streak",
-                detail: "Clock in for every scheduled workday five times in a row.",
-                isUnlocked: bestStreak >= 5,
-                progress: min(Double(bestStreak) / 5, 1),
-                progressText: bestStreak >= 5 ? "Unlocked" : "\(bestStreak)/5 days"
-            ),
-            AchievementStatus(
-                id: "thirty-day-streak",
-                title: "30-day streak",
-                detail: "Hold a 30-workday streak on this income stream.",
-                isUnlocked: bestStreak >= 30,
-                progress: min(Double(bestStreak) / 30, 1),
-                progressText: bestStreak >= 30 ? "Unlocked" : "\(bestStreak)/30 days"
-            )
-        ]
+        insightsService.achievements(
+            at: date,
+            aggregates: selectedDayAggregates(at: date),
+            configuration: configuration
+        )
     }
 
     func spendingComparisonsStatus(at date: Date) -> [SpendingComparison] {
-        let todaysAmount = dayAggregate(on: date, at: date)?.netEarned ?? 0
-        let perSecond = max(estimate.netPerSecond, 0)
-        let catalog = [
-            ("netflix", "Netflix subscription", 15.49),
-            ("coffee", "coffee run", 6.50),
-            ("groceries", "weekly groceries", 82.0),
-            ("flight", "cheap flight", 249.0)
-        ]
-
-        return catalog.map { item in
-            SpendingComparison(
-                id: item.0,
-                title: item.1,
-                amount: item.2,
-                timeToEarnSeconds: perSecond > 0 ? item.2 / perSecond : 0,
-                currentAmountEarned: todaysAmount
-            )
-        }
+        insightsService.spendingComparisons(
+            at: date,
+            aggregates: selectedDayAggregates(at: date),
+            netPerSecond: estimate.netPerSecond
+        )
     }
 
     private var selectedStream: IncomeStream? {
@@ -641,6 +663,10 @@ final class ClockedStore {
 
     private var parsedGoalInput: Double {
         goalInput.currencyNumber
+    }
+
+    private var trimmedProfileNameInput: String {
+        profileNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var trimmedStreamNameInput: String {
@@ -734,254 +760,69 @@ final class ClockedStore {
 
     private func finalizeActiveSession(at date: Date) {
         guard let snapshot = sessionSnapshot(at: date) else { return }
-        guard snapshot.elapsedWorkSeconds > 0 else { return }
-
-        let record = WorkdayRecord(
-            streamID: snapshot.session.streamID,
-            streamName: snapshot.session.streamName,
-            workDate: snapshot.session.workDate,
-            completedAt: date,
-            configuration: snapshot.session.configuration,
-            grossEarned: snapshot.grossEarned,
-            netEarned: snapshot.netEarned,
-            elapsedWorkSeconds: snapshot.elapsedWorkSeconds
-        )
-
+        guard let record = sessionCalculator.workdayRecord(from: snapshot, completedAt: date) else { return }
         upsert(record: record)
     }
 
     private func upsert(record: WorkdayRecord) {
-        if let index = history.firstIndex(where: {
-            $0.streamID == record.streamID && calendar.isDate($0.workDate, inSameDayAs: record.workDate)
-        }) {
-            let existing = history[index]
-            history[index] = WorkdayRecord(
-                id: existing.id,
-                streamID: existing.streamID,
-                streamName: record.streamName,
-                workDate: existing.workDate,
-                completedAt: max(existing.completedAt, record.completedAt),
-                configuration: record.configuration,
-                grossEarned: existing.grossEarned + record.grossEarned,
-                netEarned: existing.netEarned + record.netEarned,
-                elapsedWorkSeconds: existing.elapsedWorkSeconds + record.elapsedWorkSeconds
-            )
-        } else {
-            history.append(record)
-        }
-
-        history.sort { $0.completedAt > $1.completedAt }
+        history = insightsService.upserting(record, into: history)
         persistHistory()
     }
 
-    private func selectedDayAggregates(at date: Date) -> [Date: DayAggregate] {
-        var aggregates: [Date: DayAggregate] = [:]
-
-        for record in history where record.streamID == selectedStreamID {
-            let day = calendar.startOfDay(for: record.workDate)
-
-            if var aggregate = aggregates[day] {
-                aggregate.netEarned += record.netEarned
-                aggregate.grossEarned += record.grossEarned
-                aggregate.elapsedSeconds += record.elapsedWorkSeconds
-                aggregate.configuration = record.configuration
-                aggregates[day] = aggregate
-            } else {
-                aggregates[day] = DayAggregate(
-                    date: day,
-                    netEarned: record.netEarned,
-                    grossEarned: record.grossEarned,
-                    elapsedSeconds: record.elapsedWorkSeconds,
-                    configuration: record.configuration
-                )
-            }
-        }
-
-        if
-            let snapshot = sessionSnapshot(at: date),
-            snapshot.session.streamID == selectedStreamID,
-            snapshot.elapsedWorkSeconds > 0
-        {
-            let day = calendar.startOfDay(for: snapshot.session.workDate)
-
-            if var aggregate = aggregates[day] {
-                aggregate.netEarned += snapshot.netEarned
-                aggregate.grossEarned += snapshot.grossEarned
-                aggregate.elapsedSeconds += snapshot.elapsedWorkSeconds
-                aggregate.configuration = snapshot.session.configuration
-                aggregates[day] = aggregate
-            } else {
-                aggregates[day] = DayAggregate(
-                    date: day,
-                    netEarned: snapshot.netEarned,
-                    grossEarned: snapshot.grossEarned,
-                    elapsedSeconds: snapshot.elapsedWorkSeconds,
-                    configuration: snapshot.session.configuration
-                )
-            }
-        }
-
-        return aggregates
+    private func selectedDayAggregates(at date: Date) -> [Date: ClockedDayAggregate] {
+        insightsService.dayAggregates(
+            history: history,
+            selectedStreamID: selectedStreamID,
+            activeSnapshot: sessionSnapshot(at: date)
+        )
     }
 
-    private func dayAggregate(on date: Date, at referenceDate: Date) -> DayAggregate? {
-        selectedDayAggregates(at: referenceDate)[calendar.startOfDay(for: date)]
+    private func dayAggregate(on date: Date, at referenceDate: Date) -> ClockedDayAggregate? {
+        insightsService.dayAggregate(
+            on: date,
+            aggregates: selectedDayAggregates(at: referenceDate)
+        )
     }
 
     private func currentStreakValue(at date: Date) -> Int {
-        let workedDays = Set(selectedDayAggregates(at: date).keys)
-        guard let lastRequiredWorkday = scheduledWorkday(onOrBefore: date) else { return 0 }
-        guard workedDays.contains(lastRequiredWorkday) else { return 0 }
-
-        var streak = 0
-        var cursor = lastRequiredWorkday
-
-        while workedDays.contains(cursor) {
-            streak += 1
-
-            guard let previous = scheduledWorkday(before: cursor) else { break }
-            cursor = previous
-        }
-
-        return streak
+        insightsService.currentStreak(
+            at: date,
+            aggregates: selectedDayAggregates(at: date),
+            configuration: configuration
+        )
     }
 
     private func bestStreakValue(at date: Date) -> Int {
-        let workedDays = Set(selectedDayAggregates(at: date).keys)
-        guard let firstWorkedDay = workedDays.min(), let lastWorkedDay = workedDays.max() else { return 0 }
-
-        var best = 0
-        var current = 0
-        var cursor = calendar.startOfDay(for: firstWorkedDay)
-        let end = calendar.startOfDay(for: lastWorkedDay)
-
-        while cursor <= end {
-            if configuration.isWorkday(on: cursor, calendar: calendar) {
-                if workedDays.contains(cursor) {
-                    current += 1
-                    best = max(best, current)
-                } else {
-                    current = 0
-                }
-            }
-
-            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
-        }
-
-        return best
-    }
-
-    private func bestWeeklyNet(at date: Date) -> Double {
-        let aggregates = selectedDayAggregates(at: date)
-        var totalsByWeek: [Date: Double] = [:]
-
-        for aggregate in aggregates.values {
-            let interval = calendar.dateInterval(of: .weekOfYear, for: aggregate.date)
-                ?? DateInterval(start: calendar.startOfDay(for: aggregate.date), duration: 6 * 24 * 3600)
-            totalsByWeek[interval.start, default: 0] += aggregate.netEarned
-        }
-
-        return totalsByWeek.values.max() ?? 0
-    }
-
-    private func scheduledWorkday(onOrBefore date: Date) -> Date? {
-        let referenceDay = calendar.startOfDay(for: date)
-
-        for offset in 0..<14 {
-            guard let candidate = calendar.date(byAdding: .day, value: -offset, to: referenceDay) else { continue }
-            if configuration.isWorkday(on: candidate, calendar: calendar) {
-                return candidate
-            }
-        }
-
-        return nil
-    }
-
-    private func scheduledWorkday(before date: Date) -> Date? {
-        let referenceDay = calendar.startOfDay(for: date)
-
-        for offset in 1..<14 {
-            guard let candidate = calendar.date(byAdding: .day, value: -offset, to: referenceDay) else { continue }
-            if configuration.isWorkday(on: candidate, calendar: calendar) {
-                return candidate
-            }
-        }
-
-        return nil
+        insightsService.bestStreak(
+            at: date,
+            aggregates: selectedDayAggregates(at: date),
+            configuration: configuration
+        )
     }
 
     private func persistWorkspace() {
-        let workspace = ClockedWorkspace(
-            streams: streams,
-            selectedStreamID: selectedStreamID
-        )
-
-        if let data = try? Self.encoder.encode(workspace) {
-            defaults.set(data, forKey: workspaceKey)
-        }
+        persistState()
     }
 
     private func persistHistory() {
-        if let data = try? Self.encoder.encode(history) {
-            defaults.set(data, forKey: historyKey)
-        }
+        persistState()
     }
 
     private func persistSession() {
-        guard let activeSession else {
-            defaults.removeObject(forKey: sessionKey)
-            return
-        }
-
-        if let data = try? Self.encoder.encode(activeSession) {
-            defaults.set(data, forKey: sessionKey)
-        }
+        persistState()
     }
 
-    private static func loadWorkspace(from defaults: UserDefaults) -> ClockedWorkspace {
-        if
-            let data = defaults.data(forKey: "clocked.workspace.v1"),
-            let decoded = try? decoder.decode(ClockedWorkspace.self, from: data),
-            !decoded.streams.isEmpty
-        {
-            let selectedStreamID = decoded.streams.contains(where: { $0.id == decoded.selectedStreamID })
-                ? decoded.selectedStreamID
-                : decoded.streams[0].id
-
-            return ClockedWorkspace(
-                streams: decoded.streams,
-                selectedStreamID: selectedStreamID
+    private func persistState() {
+        persistence.saveState(
+            ClockedPersistedState(
+                workspace: ClockedWorkspace(
+                    streams: streams,
+                    selectedStreamID: selectedStreamID
+                ),
+                history: history,
+                activeSession: activeSession,
+                settings: localSettings
             )
-        }
-
-        if
-            let data = defaults.data(forKey: "clocked.configuration.v2"),
-            let legacyConfiguration = try? decoder.decode(EarningsConfiguration.self, from: data)
-        {
-            let primaryStream = IncomeStream.primary(configuration: legacyConfiguration)
-            return ClockedWorkspace(
-                streams: [primaryStream],
-                selectedStreamID: primaryStream.id
-            )
-        }
-
-        let primaryStream = IncomeStream.primary(configuration: .default)
-        return ClockedWorkspace(
-            streams: [primaryStream],
-            selectedStreamID: primaryStream.id
         )
     }
-
-    private static let encoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .millisecondsSince1970
-        return encoder
-    }()
-
-    private static let decoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .millisecondsSince1970
-        return decoder
-    }()
 }

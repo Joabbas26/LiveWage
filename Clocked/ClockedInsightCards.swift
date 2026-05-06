@@ -136,6 +136,8 @@ struct WeeklySummaryCard: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Share weekly summary")
+                .accessibilityHint("Creates a shareable weekly earnings card")
             }
 
             HStack(alignment: .lastTextBaseline, spacing: 4) {
@@ -208,6 +210,10 @@ struct WeeklySummaryCard: View {
             shareItems = [summary.shareText]
         }
 
+        ClockedTelemetry.shared.weeklySummaryShared(
+            daysWorked: summary.daysWorked,
+            hasEarnings: summary.netTotal > 0
+        )
         isShareSheetPresented = true
     }
 }
