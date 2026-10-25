@@ -25,29 +25,31 @@ struct LiveWageNoticeBanner: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: notice.tone == .warning ? "exclamationmark.triangle.fill" : "info.circle.fill")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(notice.tone == .warning ? LiveWageTheme.amber : LiveWageTheme.blue)
+                .foregroundStyle(notice.tone == .warning ? LiveWageTheme.amberText : LiveWageTheme.blue)
                 .padding(.top, 2)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(notice.title)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.liveWage(.subheadline, weight: .bold))
                     .foregroundStyle(LiveWageTheme.primaryText)
 
                 Text(notice.message)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.liveWage(.footnote, weight: .medium))
                     .foregroundStyle(LiveWageTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(LiveWageTheme.elevatedSurface.opacity(0.94))
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(notice.tone == .warning ? LiveWageTheme.amberSoft : LiveWageTheme.elevatedSurface)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(notice.tone == .warning ? LiveWageTheme.amber.opacity(0.5) : LiveWageTheme.blue.opacity(0.45), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(notice.tone == .warning ? LiveWageTheme.amber.opacity(0.5) : LiveWageTheme.blue.opacity(0.45), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(notice.title). \(notice.message)")

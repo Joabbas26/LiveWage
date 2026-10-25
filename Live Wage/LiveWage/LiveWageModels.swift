@@ -762,6 +762,19 @@ struct WeeklySummary: Equatable {
     }
 }
 
+struct WeekDayTotal: Identifiable, Equatable {
+    let date: Date
+    let shortSymbol: String
+    let netEarned: Double
+    let expectedNet: Double
+    let isToday: Bool
+    let isFuture: Bool
+    let isWorkday: Bool
+    let isLive: Bool
+
+    var id: Date { date }
+}
+
 struct SavingsGoalProgress: Equatable {
     let targetAmount: Double
     let currentAmount: Double
