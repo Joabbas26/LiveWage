@@ -735,12 +735,27 @@ final class LiveWageStore {
         streamNameInput.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    // Keeps amounts small enough to format safely: at most 9 whole-dollar digits and 2 decimal places.
     private func sanitizeCurrencyInput(_ value: String) -> String {
         var sanitized = ""
         var hasDecimalSeparator = false
+        var wholeDigits = 0
+        var fractionDigits = 0
 
         for character in value {
-            if character.isNumber || character == "," {
+            if character.isASCII, character.isNumber {
+                if hasDecimalSeparator {
+                    guard fractionDigits < LiveWageConstants.maxCurrencyFractionDigits else { continue }
+                    fractionDigits += 1
+                } else {
+                    guard wholeDigits < LiveWageConstants.maxCurrencyWholeDigits else { continue }
+                    wholeDigits += 1
+                }
+                sanitized.append(character)
+                continue
+            }
+
+            if character == ",", !hasDecimalSeparator {
                 sanitized.append(character)
                 continue
             }

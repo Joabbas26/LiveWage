@@ -406,13 +406,14 @@ struct LiveWageDetailRow: View {
 extension Double {
     // Small rates read better in cents: 0.0081 becomes "0.81¢".
     var friendlyRateString: String {
-        guard self < 1 else { return currencyString }
         let cents = self * 100
-        return cents >= 10 ? String(format: "%.0f¢", cents) : String(format: "%.2f¢", cents)
+        // Decide on the rounded value so 0.996 shows as "$1.00", not "100¢".
+        guard cents.isFinite, cents < 99.5 else { return currencyString }
+        return cents >= 9.995 ? String(format: "%.0f¢", cents) : String(format: "%.2f¢", cents)
     }
 
     var wholeCurrencyString: String {
-        "$\(Int(rounded()).groupedNumber)"
+        "$\(safeRoundedInt.groupedNumber)"
     }
 
     var percentString: String {

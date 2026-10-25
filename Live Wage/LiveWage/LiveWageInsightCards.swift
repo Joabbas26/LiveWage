@@ -270,7 +270,7 @@ struct SavingsTargetCard: View {
         let remaining = progress.remainingAmount.wholeCurrencyString
         guard netDaily > 0 else { return "\(remaining) to go" }
 
-        let workdays = Int((progress.remainingAmount / netDaily).rounded(.up))
+        let workdays = (progress.remainingAmount / netDaily).rounded(.up).safeRoundedInt
         return "\(remaining) to go — about \(workdays) \(workdays == 1 ? "workday" : "workdays") at your current pace"
     }
 }

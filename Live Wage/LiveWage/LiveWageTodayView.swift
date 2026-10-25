@@ -36,16 +36,19 @@ struct LiveWageReadyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                LiveWageHeader(
-                    caption: Date.now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()),
-                    title: "Today"
-                ) {
-                    Button(action: openProfile) {
-                        LiveWageInitialsBadge(initials: hasProfileName ? store.userInitials : nil)
+                // Ticks each minute so the date rolls over at midnight while the app stays open.
+                TimelineView(.everyMinute) { context in
+                    LiveWageHeader(
+                        caption: context.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()),
+                        title: "Today"
+                    ) {
+                        Button(action: openProfile) {
+                            LiveWageInitialsBadge(initials: hasProfileName ? store.userInitials : nil)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Profile")
+                        .accessibilityHint("Opens your profile and settings")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Profile")
-                    .accessibilityHint("Opens your profile and settings")
                 }
 
                 if let notice = store.activeEstimateNotice {

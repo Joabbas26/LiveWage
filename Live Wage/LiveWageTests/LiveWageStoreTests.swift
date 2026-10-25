@@ -76,6 +76,34 @@ final class LiveWageStoreTests: XCTestCase {
         XCTAssertEqual(store.profileNameDisplay, "Joab Bastidas")
     }
 
+    func testCurrencyInputIsCappedAndHugeAmountsFormatSafely() {
+        let store = makeStore()
+
+        store.updateSalaryInput("99999999999999999999.999")
+        XCTAssertEqual(store.salaryInput, "999999999.99")
+
+        store.commitSalaryInput()
+        XCTAssertEqual(store.configuration.salaryAmount, 999_999_999.99, accuracy: 0.001)
+        XCTAssertFalse(store.configuration.payLabel.isEmpty)
+        XCTAssertFalse(CurrencyAmountParts(amount: store.draftEstimate.netDaily).major.isEmpty)
+
+        XCTAssertEqual(1e20.safeRoundedInt, 1_000_000_000_000_000)
+        XCTAssertEqual(Double.nan.safeRoundedInt, 0)
+        XCTAssertFalse(1e20.wholeCurrencyString.isEmpty)
+    }
+
+    func testGroupedInputRoundTripsThroughCurrencyNumber() {
+        XCTAssertEqual(75_000.0.groupedCurrencyInput, "75,000")
+        XCTAssertEqual(75_000.0.groupedCurrencyInput.currencyNumber, 75_000)
+        XCTAssertEqual(1234.5.groupedCurrencyInput.currencyNumber, 1234.5)
+    }
+
+    func testFriendlyRateStringRoundsUpToDollars() {
+        XCTAssertEqual(0.996.friendlyRateString, "$1.00")
+        XCTAssertEqual(0.5.friendlyRateString, "50¢")
+        XCTAssertEqual(0.0081.friendlyRateString, "0.81¢")
+    }
+
     func testClearStatsRemovesHistoryButKeepsSetup() throws {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .millisecondsSince1970

@@ -11,6 +11,8 @@ import SwiftUI
 enum LiveWageConstants {
     static let primaryStreamID = UUID(uuidString: "2E0A6EF2-3A84-4D3A-9B7A-6BC5A3B91111")!
     static let maxIncomeStreams = 3
+    static let maxCurrencyWholeDigits = 9
+    static let maxCurrencyFractionDigits = 2
 }
 
 enum LiveWageAppearancePreference: String, CaseIterable, Codable, Identifiable {
@@ -870,9 +872,9 @@ struct CurrencyAmountParts {
     let minor: String
 
     init(amount: Double) {
-        let totalCents = max(Int((amount * 100).rounded()), 0)
-        let dollars = totalCents / 100
-        let cents = totalCents % 100
+        let totalCents = (amount * 100).safeRoundedInt
+        let dollars = max(totalCents, 0) / 100
+        let cents = max(totalCents, 0) % 100
 
         major = "$\(dollars.groupedNumber)"
         minor = String(format: ".%02d", cents)
@@ -891,25 +893,67 @@ struct TaxBreakdownRow: Identifiable {
 
 extension String {
     var currencyNumber: Double {
-        let filtered = filter { $0.isNumber || $0 == "." }
-        return Double(filtered) ?? 0
+        let filtered = filter { ($0.isASCII && $0.isNumber) || $0 == "." }
+        let value = Double(filtered) ?? 0
+        return value.isFinite ? value : 0
     }
 }
 
-extension Double {
-    var currencyString: String {
+// Amounts are US dollars (the tax engine is US-only), so formatting is pinned to en_US rather than the
+// device locale. This keeps "$" consistent across screens and keeps grouped input parseable by currencyNumber.
+enum LiveWageFormatters {
+    static let locale = Locale(identifier: "en_US")
+
+    static let currency: NumberFormatter = {
         let formatter = NumberFormatter()
+        formatter.locale = locale
         formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
         formatter.maximumFractionDigits = 2
         formatter.minimumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: self)) ?? "$0.00"
+        return formatter
+    }()
+
+    static let wholeNumber: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
+    static let compactNumber: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        return formatter
+    }()
+
+    static let currencyInput: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }()
+}
+
+extension Double {
+    // Int(_:) traps on NaN, infinity, and values past Int.max, so clamp before converting.
+    var safeRoundedInt: Int {
+        guard isFinite else { return 0 }
+        let limit = 1e15
+        return Int(min(max(rounded(), -limit), limit))
+    }
+
+    var currencyString: String {
+        LiveWageFormatters.currency.string(from: NSNumber(value: self)) ?? "$0.00"
     }
 
     var compactCurrency: String {
         if self >= 1000 {
             let value = self / 1000
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
+            let formatter = LiveWageFormatters.compactNumber
             formatter.maximumFractionDigits = value < 10 ? 1 : 0
             let text = formatter.string(from: NSNumber(value: value)) ?? "\(value)"
             return "$\(text)k"
@@ -919,15 +963,13 @@ extension Double {
     }
 
     var groupedCurrencyInput: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
+        let formatter = LiveWageFormatters.currencyInput
         formatter.minimumFractionDigits = floor(self) == self ? 0 : 2
         return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 
     var clockString: String {
-        let totalSeconds = max(Int(rounded()), 0)
+        let totalSeconds = max(safeRoundedInt, 0)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -935,7 +977,7 @@ extension Double {
     }
 
     var shortDurationString: String {
-        let totalSeconds = max(Int(rounded()), 0)
+        let totalSeconds = max(safeRoundedInt, 0)
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -958,9 +1000,6 @@ extension Double {
 
 extension Int {
     var groupedNumber: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: self)) ?? "\(self)"
+        LiveWageFormatters.wholeNumber.string(from: NSNumber(value: self)) ?? "\(self)"
     }
 }
