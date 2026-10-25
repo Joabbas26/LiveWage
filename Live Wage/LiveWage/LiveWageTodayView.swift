@@ -15,7 +15,7 @@ struct LiveWageTodayTab: View {
     var body: some View {
         Group {
             if store.activeSession != nil {
-                LiveWageLiveView(store: store, isWide: isWide)
+                LiveWageLiveView(store: store, isWide: isWide, openSettings: openProfile)
                     .transition(.opacity)
             } else {
                 LiveWageReadyView(store: store, isWide: isWide, openProfile: openProfile)

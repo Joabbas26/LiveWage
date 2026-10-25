@@ -41,6 +41,9 @@ enum LiveWageTheme {
     static let heroTile = Color(lightHex: 0x2E2620, darkHex: 0x36322D)
     static let heroText = Color(hex: 0xF8F4ED)
     static let heroSecondaryText = Color(hex: 0xCFC6B9)
+    static let ringFill = Color(lightHex: 0xFFFCF8, darkHex: 0x181A16)
+    static let ringTrack = Color(lightHex: 0xE6DCCF, darkHex: 0x23281F)
+    static let ringTick = Color(lightHex: 0xD8CBBB, darkHex: 0x3B4136)
 }
 
 enum LiveWageLayout {
