@@ -336,6 +336,26 @@ final class LiveWageStore {
         dayAggregate(on: .now, at: .now)?.netEarned ?? 0
     }
 
+    var canEditPayDetails: Bool {
+        activeSession == nil
+    }
+
+    // The saved configuration with any typed-but-uncommitted amounts applied, for live previews.
+    var draftConfiguration: EarningsConfiguration {
+        var draft = configuration
+        if parsedSalaryInput > 0 {
+            draft.salaryAmount = parsedSalaryInput
+        }
+        draft.annualBonusAmount = parsedBonusInput
+        draft.monthlyPretaxBenefitsAmount = parsedBenefitsInput
+        draft.savingsGoalAmount = parsedGoalInput
+        return draft
+    }
+
+    var draftEstimate: EarningsEstimate {
+        LiveWageTaxEngine.estimate(for: draftConfiguration)
+    }
+
     func updateStreamNameInput(_ value: String) {
         streamNameInput = String(value.prefix(26))
     }
@@ -404,6 +424,16 @@ final class LiveWageStore {
         commitBonusInput()
         commitBenefitsInput()
         commitGoalInput()
+    }
+
+    // Applies every typed value when pay details close; anything that can't be applied snaps back to the saved value.
+    func finishEditingPayDetails() {
+        commitPendingInputs()
+        salaryInput = configuration.salaryAmount.groupedCurrencyInput
+        bonusInput = configuration.annualBonusAmount.groupedCurrencyInput
+        benefitsInput = configuration.monthlyPretaxBenefitsAmount.groupedCurrencyInput
+        goalInput = configuration.savingsGoalAmount.groupedCurrencyInput
+        streamNameInput = selectedStreamName
     }
 
     func setSelectedStream(_ streamID: UUID) {
@@ -616,6 +646,38 @@ final class LiveWageStore {
             aggregates: selectedDayAggregates(at: date),
             selectedStreamName: selectedStreamName
         )
+    }
+
+    func weekDays(at date: Date) -> [WeekDayTotal] {
+        let aggregates = selectedDayAggregates(at: date)
+        let today = calendar.startOfDay(for: date)
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? today
+        let isLiveToday = sessionSnapshot(at: date).map { snapshot in
+            snapshot.session.streamID == selectedStreamID
+                && calendar.isDate(snapshot.session.workDate, inSameDayAs: date)
+                && (snapshot.status == .live || snapshot.status == .paused)
+        } ?? false
+        let expectedNet = estimate.netDaily
+        let symbols = calendar.veryShortWeekdaySymbols
+
+        return (0..<7).compactMap { offset -> WeekDayTotal? in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: weekStart) else { return nil }
+
+            let dayStart = calendar.startOfDay(for: day)
+            let symbolIndex = calendar.component(.weekday, from: dayStart) - 1
+            let isWorkday = configuration.isWorkday(on: dayStart, calendar: calendar)
+
+            return WeekDayTotal(
+                date: dayStart,
+                shortSymbol: symbols.indices.contains(symbolIndex) ? symbols[symbolIndex] : "",
+                netEarned: insightsService.dayAggregate(on: dayStart, aggregates: aggregates)?.netEarned ?? 0,
+                expectedNet: isWorkday ? expectedNet : 0,
+                isToday: dayStart == today,
+                isFuture: dayStart > today,
+                isWorkday: isWorkday,
+                isLive: dayStart == today && isLiveToday
+            )
+        }
     }
 
     func goalProgressStatus(at date: Date) -> SavingsGoalProgress? {
